@@ -1,0 +1,476 @@
+#include "main.h"
+#include "api.h"
+#include <math.h>
+#include <string>
+using namespace pros;
+
+pros::Controller master(pros::E_CONTROLLER_MASTER);
+pros::Imu in(20);
+pros::Motor roller (15, pros::E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_ROTATIONS);
+pros::Motor sw (12, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS);
+pros::Motor se (2, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS);
+pros::Motor nw (11, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS);
+pros::Motor ne (1, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS); 
+pros::Motor intake(16, E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS); 
+pros::ADIEncoder ltw ('a', 'b', 0); 
+pros::ADIEncoder rtw ('e', 'f', 1);
+pros::ADIEncoder stw ('g', 'h', 1);
+pros::ADIDigitalOut air ('c');
+ADIDigitalOut expansion('d');
+
+//flywheel
+pros::Motor fa (17, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS); 
+pros::Motor fb (13, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS);
+
+//flywheel pid
+const double threshold = 50;
+const double kV = 20;
+const double kP = 40; //30
+double targetVelocity;
+
+//odometry variables
+double wd = 3.25; //wheel diameter
+double twd = 2.75; //tracking wheel diamter
+double sl=1.2, ss=4.72441, sr=3.2; //distance from tracking wheels to center
+double x,y,theta;
+double prevL,prevR,prevS,L,R,S;
+double h,i,a; //distance travelled, half of angle change, angle change
+double h2; //same but for strafe
+double r,r2; //cirle radius
+
+double kp = 26, ki = 0.001, kd = 0.01; //ki 0.0003 0.0001 kp 20 kd 0.07 kp 25
+double ultotalerror,lltotalerror;
+double ulpreverror = 0,llpreverror=0,llerrordiff = 0,ulerrordiff;
+//added variables to make robot move straighter path
+double distpreverror, disterrordiff, disttotalerror;
+void destodom(double target_x, double target_y){
+	double xcom, ycom, uld, lld, rta, fta, dist;
+	nw.tare_position();ne.tare_position();sw.tare_position();se.tare_position();
+	xcom = target_x-x, ycom = target_y-y;
+	if(xcom>0) fta = atan(ycom/xcom);
+	else fta = atan(ycom/xcom)-M_PI;
+	if(isnan(fta)||xcom==0) fta = M_PI/2;
+	rta = fta-(M_PI/4-theta);
+	dist = sqrt(xcom*xcom+ycom*ycom);
+	//added manipulations to dist line (reversed the order of mulitplying by k constants):
+	disttotalerror+=dist;
+	disterrordiff = dist - distpreverror;
+	distpreverror = dist;
+	double mag = dist*kp + disterrordiff*kd + disttotalerror*ki;
+	if(mag>600) mag = 600;
+
+	uld = cos(rta)*dist;
+	lld = sin(rta)*dist;
+	ultotalerror+=uld;
+	lltotalerror+=lld;
+	ulerrordiff = uld - ulpreverror;
+	llerrordiff = lld - llpreverror;
+	ulpreverror = uld;
+	llpreverror = lld;
+	double uldvel = uld*kp+ulerrordiff*kd+ultotalerror*ki;
+	double lldvel = lld*kp+llerrordiff*kd+lltotalerror*ki;
+	if(uldvel>200){
+		lldvel = lldvel*200/uldvel;
+		uldvel = 200;
+	}
+	if(lldvel>200){
+		uldvel = uldvel*200/lldvel;
+		lldvel = 200;
+	}
+	nw.move_velocity(cos(rta)*mag);
+	se.move_velocity(cos(rta)*mag);
+	ne.move_velocity(sin(rta)*mag);
+	sw.move_velocity(sin(rta)*mag);
+}
+
+void destodoms(double target_x, double target_y){
+	double xcom, ycom, uld, lld, rta, fta, dist;
+	nw.tare_position();ne.tare_position();sw.tare_position();se.tare_position();
+	xcom = target_x-x, ycom = target_y-y;
+	if(xcom>0) fta = atan(ycom/xcom);
+	else fta = atan(ycom/xcom)-M_PI;
+	if(isnan(fta)||xcom==0) fta = M_PI/2;
+	rta = fta-(M_PI/4-theta);
+	dist = sqrt(xcom*xcom+ycom*ycom);
+	//added manipulations to dist line (reversed the order of mulitplying by k constants):
+	disttotalerror+=dist;
+	disterrordiff = dist - distpreverror;
+	distpreverror = dist;
+	double mag = dist*kp + disterrordiff*kd + disttotalerror*ki;
+	if(mag>200) mag = 200;
+
+	uld = cos(rta)*dist;
+	lld = sin(rta)*dist;
+	ultotalerror+=uld;
+	lltotalerror+=lld;
+	ulerrordiff = uld - ulpreverror;
+	llerrordiff = lld - llpreverror;
+	ulpreverror = uld;
+	llpreverror = lld;
+	double uldvel = uld*kp+ulerrordiff*kd+ultotalerror*ki;
+	double lldvel = lld*kp+llerrordiff*kd+lltotalerror*ki;
+	if(uldvel>200){
+		lldvel = lldvel*200/uldvel;
+		uldvel = 200;
+	}
+	if(lldvel>200){
+		uldvel = uldvel*200/lldvel;
+		lldvel = 200;
+	}
+	nw.move_velocity(cos(rta)*200);
+	se.move_velocity(cos(rta)*200);
+	ne.move_velocity(sin(rta)*200);
+	sw.move_velocity(sin(rta)*200);
+}
+
+void odometry(){
+	ltw.reset();
+	stw.reset();
+	rtw.reset();
+	x = 0, y = 0, theta = 0;
+	prevL = prevR = prevS = 0;
+	while(1){
+		L = (ltw.get_value()-prevL)/360*twd*M_PI;
+		R = (rtw.get_value()-prevR)/360*twd*M_PI;
+		S = (stw.get_value()-prevS)/360*twd*M_PI;
+		prevL = (double)(ltw.get_value());
+		prevR = (double)(rtw.get_value());
+		prevS = (double)(stw.get_value());
+		a = (L-R)/(sl+sr); //added sr
+		if(a){
+			r = R/a;
+			i = a/2.0;
+			h = ((r+sr)*sin(i))*2;
+			r2 = S/a;
+			h2 = ((r2+ss)*sin(i))*2;
+		}
+		else{
+			h = R;
+			i = 0;
+			h2 = S;
+		}
+		double p = i+theta;
+		y = y + h*cos(p) + h2*(-1*sin(p));
+		x = x + h*sin(p) + h2*cos(p);
+		theta+=a;
+		//theta = theta%(2*M_PI); 
+		//theta+=2*M_PI;
+		//while(theta-2*M_PI>=0) theta-=2*M_PI;
+		if(targetVelocity>-300){
+			double error = targetVelocity - ((fa.get_actual_velocity()+fb.get_actual_velocity())/2);
+			double power;
+			if(error > threshold){
+				power = 12000;
+			}
+			else if(error < -threshold){
+				power = 0;
+			}
+			else{
+				power = kV * targetVelocity + kP*error; 
+			}
+			fa.move_voltage(power);
+			fb.move_voltage(power);
+		}
+	delay(10);
+	//destodom(0,120);
+	}
+}
+
+void initialize() {
+	expansion.set_value(0);
+	air.set_value(0);
+	pros::lcd::initialize();
+	ne.set_brake_mode(E_MOTOR_BRAKE_BRAKE);
+	nw.set_brake_mode(E_MOTOR_BRAKE_BRAKE);
+	sw.set_brake_mode(E_MOTOR_BRAKE_BRAKE);
+	se.set_brake_mode(E_MOTOR_BRAKE_BRAKE);	
+	x = 0,y=0,theta=0;
+	distpreverror = 0, disterrordiff = 0, disttotalerror = 0;
+	
+	in.reset();
+	in.tare();
+	ultotalerror=0,lltotalerror=0;
+	pros::Task my_task(odometry);
+}void disabled() {}void competition_initialize() {}
+
+void getTo(double xx, double yy){
+	while(abs(xx-x)>0.1||abs(yy-y)>0.1){
+		destodom(xx,yy);
+		delay(20);
+	}
+	ne.move_velocity(0);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	sw.move_velocity(0);
+}
+
+void getTos(double xx, double yy){
+	while(abs(xx-x)>0.1||abs(yy-y)>0.1){
+		destodoms(xx,yy);
+		delay(20);
+	}
+	ne.move_velocity(0);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	sw.move_velocity(0);
+}
+
+void tr(double vel){
+	ne = -vel;
+	nw = vel;
+	se = -vel;
+	sw = vel;
+}
+
+double tkP = 30;
+void turnTo(double aa){
+	//speed used to be 50
+	double oldT = theta;
+	aa = aa*M_PI/180;
+	if(theta>oldT+aa)
+	while(theta>aa+oldT){
+		//tr((oldT+aa-theta)*tkP);
+		tr(-80);
+		delay(10);
+	}
+	else{
+		while(theta<aa+oldT)
+		tr(80);
+		delay(10);
+	}
+	tr(0);
+}
+
+void turnToR(double aa){
+	double oldT = theta;
+	aa = aa*M_PI/180;
+	while(abs(oldT+aa-theta)>(3/360*2*M_PI)){
+		//tr((oldT+aa-theta)*tkP);
+		tr(50);
+		delay(10);
+	}
+	tr(0);
+}
+
+void shoot(){
+	air.set_value(1);
+	pros::delay(500);
+	air.set_value(0);
+	pros::delay(500);
+}
+
+void roll(){
+	roller.move_velocity(200);
+	delay(63);
+	roller.move_velocity(0);
+}
+
+void winpoint(){
+	air.set_value(0);
+	//getTo(0,-1);
+	nw.move_velocity(-100);
+	se.move_velocity(-100);
+	ne.move_velocity(-100);
+	sw.move_velocity(-100);
+	delay(200);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	roller.move_velocity(-200);
+	delay(200);
+	roller.move_velocity(0);
+	getTo(26,30); //10,14 24,28
+	targetVelocity = 600;
+	turnTo(-25);
+	pros::delay(1000);
+	air.set_value(1);
+	pros::delay(800);
+	air.set_value(0);
+	pros::delay(800);
+	air.set_value(1);
+	pros::delay(180);
+	air.set_value(0);
+	delay(800);
+	air.set_value(1);
+	pros::delay(180);
+	air.set_value(0);
+	delay(800);
+	targetVelocity = 0;
+	turnTo(-35);
+	getTo(60,118);
+}
+
+void URauton(){
+	intake.move_velocity(600);
+	targetVelocity = 600;
+	getTo(-25,29);
+	turnTo(-2);
+	shoot();
+	delay(500);
+	shoot();
+	delay(500);
+	shoot();
+	turnTo(-30);
+	targetVelocity = 0;
+	getTo(16,9);
+}
+
+void URauton2(){
+	intake.move_velocity(600);	
+	targetVelocity = 600;
+	getTo(0,30);
+	turnTo(6); //8 12 7
+	getTo(2,30); // 5 35 4 34 3 33 3 32 3 31
+	intake.move_velocity(-600);
+	shoot();
+	delay(300);
+	
+	shoot();
+	delay(300);
+	shoot();
+	intake.move_velocity(-600);
+	turnTo(-27);
+	intake.move_velocity(0);
+	
+	nw.move_velocity(-600);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
+	delay(300);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	getTo(23,2); //29 27 26
+	//turnTo(12);
+	roller.move_velocity(200);
+	nw.move_velocity(-600);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
+	delay(390);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	
+	
+	roll();
+	nw.move_velocity(600);
+	se.move_velocity(600);
+	ne.move_velocity(600);
+	sw.move_velocity(600);
+	delay(200);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+}
+
+void autonomous() {
+	URauton2();
+	expansion.set_value(0);
+}
+
+
+bool pu = false, pd = false,su=false,sd=0;
+bool pa = false, pb = false;
+bool cco = false;
+
+void opcontrol() {
+	lcd::print(0,"aaaa");	
+	pros::Controller master(pros::E_CONTROLLER_MASTER);
+	//in.reset();
+	//in.tare();
+	while (true){
+	/*
+		ne = master.get_analog(ANALOG_LEFT_Y) - master.get_analog(ANALOG_RIGHT_X) - master.get_analog(ANALOG_LEFT_X);
+		nw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) + master.get_analog(ANALOG_LEFT_X);
+		se = master.get_analog(ANALOG_LEFT_Y) - master.get_analog(ANALOG_RIGHT_X) + master.get_analog(ANALOG_LEFT_X);
+		sw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) - master.get_analog(ANALOG_LEFT_X);
+*/
+
+		double tilt = 45+in.get_heading() - 90; //for upper right auton, -90
+		if(master.get_analog(ANALOG_LEFT_X)==0){
+			if(master.get_analog(ANALOG_LEFT_Y)<0) tilt+=180;
+		}
+		else if(master.get_analog(ANALOG_LEFT_X)>0){
+			tilt-=(90-atan(master.get_analog(ANALOG_LEFT_Y)/master.get_analog(ANALOG_LEFT_X))*180/M_PI);
+		}
+		else{
+			tilt-=(270-atan(master.get_analog(ANALOG_LEFT_Y)/master.get_analog(ANALOG_LEFT_X))*180/M_PI);
+		}
+		double m = (master.get_analog(ANALOG_LEFT_Y))*(master.get_analog(ANALOG_LEFT_Y)) + (master.get_analog(ANALOG_LEFT_X))*(master.get_analog(ANALOG_LEFT_X));
+		m = sqrt(m);
+		nw = cos(tilt*M_PI/180)*m + master.get_analog(ANALOG_RIGHT_X);
+		se = cos(tilt*M_PI/180)*m - master.get_analog(ANALOG_RIGHT_X);
+		sw = sin(tilt*M_PI/180)*m + master.get_analog(ANALOG_RIGHT_X);
+		ne = sin(tilt*M_PI/180)*m - master.get_analog(ANALOG_RIGHT_X);
+		if(master.get_digital(E_CONTROLLER_DIGITAL_LEFT)&&master.get_digital(E_CONTROLLER_DIGITAL_A)){
+			in.reset();
+			in.tare();
+		}
+		
+		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
+			roller.move_velocity(200);
+		}
+		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_B)){
+			roller.move_velocity(-200);
+		}
+		else{
+			roller.move_velocity(0);
+		}
+		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)==1){
+			intake.move_velocity(600);
+		}
+		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)==1){
+			intake.move_velocity(-600);
+		}
+		else{
+			intake.move_velocity(0);
+		}
+
+		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)==1){
+			targetVelocity = 600;
+
+		}
+		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)==1){
+			//targetVelocity = -380;
+		    //fa.move_velocity(-350);
+			//fb.move_velocity(-350);
+targetVelocity = 500;
+		}
+		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN)==1){
+			targetVelocity = 500;
+		}
+		else{
+			targetVelocity = 0;
+		}
+		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_A)==1&&pa==0){
+			air.set_value(1);
+			pros::delay(180);
+			air.set_value(0);
+		}
+		if(master.get_digital(E_CONTROLLER_DIGITAL_LEFT)==1&&pb==0){
+			if(cco){
+				expansion.set_value(false);
+				cco = false;
+			}
+			else{
+				expansion.set_value(true);
+				cco = 1;
+			}
+			
+		}
+		pa = master.get_digital(pros::E_CONTROLLER_DIGITAL_A);
+		pb = master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT);
+		pros::lcd::print(1,"x:%lf y:%lf",x,y);
+		lcd::print(2,"theta:%lf",theta);
+		lcd::print(3,"ltw:%d rtw:%d stw:%d", ltw.get_value(), rtw.get_value(), stw.get_value());
+		delay(20);
+	}
+	expansion.set_value(0);
+	air.set_value(0);
+}
+
