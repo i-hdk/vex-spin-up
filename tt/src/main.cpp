@@ -2,7 +2,7 @@
 #include "api.h"
 #include <math.h>
 #include <string>
-using namespace pros;
+using namespace okapi;
 
 pros::Controller master(pros::E_CONTROLLER_MASTER);
 pros::Imu in(20);
@@ -11,12 +11,12 @@ pros::Motor sw (12, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS
 pros::Motor se (2, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS);
 pros::Motor nw (11, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS);
 pros::Motor ne (1, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS); 
-pros::Motor intake(16, E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS); 
+pros::Motor intake(16, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS); 
 pros::ADIEncoder ltw ('a', 'b', 0); 
 pros::ADIEncoder rtw ('e', 'f', 1);
 pros::ADIEncoder stw ('g', 'h', 1);
 pros::ADIDigitalOut air ('c');
-ADIDigitalOut expansion('d');
+pros::ADIDigitalOut expansion('d');
 
 //flywheel
 pros::Motor fa (17, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS); 
@@ -31,7 +31,7 @@ double targetVelocity;
 //odometry variables
 double wd = 3.25; //wheel diameter
 double twd = 2.75; //tracking wheel diamter
-double sl=1.2, ss=4.72441, sr=3.2; //distance from tracking wheels to center
+double sl=2.36, ss=3, sr=2.36; //distance from tracking wheels to center
 double x,y,theta;
 double prevL,prevR,prevS,L,R,S;
 double h,i,a; //distance travelled, half of angle change, angle change
@@ -58,7 +58,6 @@ void destodom(double target_x, double target_y){
 	distpreverror = dist;
 	double mag = dist*kp + disterrordiff*kd + disttotalerror*ki;
 	if(mag>600) mag = 600;
-
 	uld = cos(rta)*dist;
 	lld = sin(rta)*dist;
 	ultotalerror+=uld;
@@ -69,58 +68,10 @@ void destodom(double target_x, double target_y){
 	llpreverror = lld;
 	double uldvel = uld*kp+ulerrordiff*kd+ultotalerror*ki;
 	double lldvel = lld*kp+llerrordiff*kd+lltotalerror*ki;
-	if(uldvel>200){
-		lldvel = lldvel*200/uldvel;
-		uldvel = 200;
-	}
-	if(lldvel>200){
-		uldvel = uldvel*200/lldvel;
-		lldvel = 200;
-	}
 	nw.move_velocity(cos(rta)*mag);
 	se.move_velocity(cos(rta)*mag);
 	ne.move_velocity(sin(rta)*mag);
 	sw.move_velocity(sin(rta)*mag);
-}
-
-void destodoms(double target_x, double target_y){
-	double xcom, ycom, uld, lld, rta, fta, dist;
-	nw.tare_position();ne.tare_position();sw.tare_position();se.tare_position();
-	xcom = target_x-x, ycom = target_y-y;
-	if(xcom>0) fta = atan(ycom/xcom);
-	else fta = atan(ycom/xcom)-M_PI;
-	if(isnan(fta)||xcom==0) fta = M_PI/2;
-	rta = fta-(M_PI/4-theta);
-	dist = sqrt(xcom*xcom+ycom*ycom);
-	//added manipulations to dist line (reversed the order of mulitplying by k constants):
-	disttotalerror+=dist;
-	disterrordiff = dist - distpreverror;
-	distpreverror = dist;
-	double mag = dist*kp + disterrordiff*kd + disttotalerror*ki;
-	if(mag>200) mag = 200;
-
-	uld = cos(rta)*dist;
-	lld = sin(rta)*dist;
-	ultotalerror+=uld;
-	lltotalerror+=lld;
-	ulerrordiff = uld - ulpreverror;
-	llerrordiff = lld - llpreverror;
-	ulpreverror = uld;
-	llpreverror = lld;
-	double uldvel = uld*kp+ulerrordiff*kd+ultotalerror*ki;
-	double lldvel = lld*kp+llerrordiff*kd+lltotalerror*ki;
-	if(uldvel>200){
-		lldvel = lldvel*200/uldvel;
-		uldvel = 200;
-	}
-	if(lldvel>200){
-		uldvel = uldvel*200/lldvel;
-		lldvel = 200;
-	}
-	nw.move_velocity(cos(rta)*200);
-	se.move_velocity(cos(rta)*200);
-	ne.move_velocity(sin(rta)*200);
-	sw.move_velocity(sin(rta)*200);
 }
 
 void odometry(){
@@ -171,22 +122,21 @@ void odometry(){
 			fa.move_voltage(power);
 			fb.move_voltage(power);
 		}
-	delay(10);
+	pros::delay(10);
 	//destodom(0,120);
 	}
 }
 
 void initialize() {
-	expansion.set_value(0);
-	air.set_value(0);
+	expansion.pros::ADIDigitalOut::set_value(0);
+	air.pros::ADIDigitalOut::set_value(0);
 	pros::lcd::initialize();
-	ne.set_brake_mode(E_MOTOR_BRAKE_BRAKE);
-	nw.set_brake_mode(E_MOTOR_BRAKE_BRAKE);
-	sw.set_brake_mode(E_MOTOR_BRAKE_BRAKE);
-	se.set_brake_mode(E_MOTOR_BRAKE_BRAKE);	
+	ne.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
+	nw.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
+	sw.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
+	se.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);	
 	x = 0,y=0,theta=0;
 	distpreverror = 0, disterrordiff = 0, disttotalerror = 0;
-	
 	in.reset();
 	in.tare();
 	ultotalerror=0,lltotalerror=0;
@@ -196,18 +146,7 @@ void initialize() {
 void getTo(double xx, double yy){
 	while(abs(xx-x)>0.1||abs(yy-y)>0.1){
 		destodom(xx,yy);
-		delay(20);
-	}
-	ne.move_velocity(0);
-	nw.move_velocity(0);
-	se.move_velocity(0);
-	sw.move_velocity(0);
-}
-
-void getTos(double xx, double yy){
-	while(abs(xx-x)>0.1||abs(yy-y)>0.1){
-		destodoms(xx,yy);
-		delay(20);
+		pros::delay(20);
 	}
 	ne.move_velocity(0);
 	nw.move_velocity(0);
@@ -231,23 +170,12 @@ void turnTo(double aa){
 	while(theta>aa+oldT){
 		//tr((oldT+aa-theta)*tkP);
 		tr(-80);
-		delay(10);
+		pros::delay(10);
 	}
 	else{
 		while(theta<aa+oldT)
 		tr(80);
-		delay(10);
-	}
-	tr(0);
-}
-
-void turnToR(double aa){
-	double oldT = theta;
-	aa = aa*M_PI/180;
-	while(abs(oldT+aa-theta)>(3/360*2*M_PI)){
-		//tr((oldT+aa-theta)*tkP);
-		tr(50);
-		delay(10);
+		pros::delay(10);
 	}
 	tr(0);
 }
@@ -261,7 +189,7 @@ void shoot(){
 
 void roll(){
 	roller.move_velocity(200);
-	delay(63);
+	pros::delay(63);
 	roller.move_velocity(0);
 }
 
@@ -272,13 +200,13 @@ void winpoint(){
 	se.move_velocity(-100);
 	ne.move_velocity(-100);
 	sw.move_velocity(-100);
-	delay(200);
+	pros::delay(200);
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
 	roller.move_velocity(-200);
-	delay(200);
+	pros::delay(200);
 	roller.move_velocity(0);
 	getTo(26,30); //10,14 24,28
 	targetVelocity = 600;
@@ -291,11 +219,11 @@ void winpoint(){
 	air.set_value(1);
 	pros::delay(180);
 	air.set_value(0);
-	delay(800);
+	pros::delay(800);
 	air.set_value(1);
 	pros::delay(180);
 	air.set_value(0);
-	delay(800);
+	pros::delay(800);
 	targetVelocity = 0;
 	turnTo(-35);
 	getTo(60,118);
@@ -307,9 +235,9 @@ void URauton(){
 	getTo(-25,29);
 	turnTo(-2);
 	shoot();
-	delay(500);
+	pros::delay(500);
 	shoot();
-	delay(500);
+	pros::delay(500);
 	shoot();
 	turnTo(-30);
 	targetVelocity = 0;
@@ -324,10 +252,10 @@ void URauton2(){
 	getTo(2,30); // 5 35 4 34 3 33 3 32 3 31
 	intake.move_velocity(-600);
 	shoot();
-	delay(300);
+	pros::delay(300);
 	
 	shoot();
-	delay(300);
+	pros::delay(300);
 	shoot();
 	intake.move_velocity(-600);
 	turnTo(-27);
@@ -337,7 +265,7 @@ void URauton2(){
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
 	sw.move_velocity(-600);
-	delay(300);
+	pros::delay(300);
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
@@ -349,7 +277,7 @@ void URauton2(){
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
 	sw.move_velocity(-600);
-	delay(390);
+	pros::delay(390);
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
@@ -361,7 +289,7 @@ void URauton2(){
 	se.move_velocity(600);
 	ne.move_velocity(600);
 	sw.move_velocity(600);
-	delay(200);
+	pros::delay(200);
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
@@ -369,7 +297,16 @@ void URauton2(){
 }
 
 void autonomous() {
-	URauton2();
+	std::shared_ptr<OdomChassisController> chassis =
+ 	ChassisControllerBuilder()
+    .withMotors(11,-1,-2,12) 
+    // green gearset, 4 inch wheel diameter, 11.5 inch wheel track
+    .withDimensions(AbstractMotor::gearset::blue, {{4_in, 11.5_in}, imev5GreenTPR})
+    // left encoder in ADI ports A & B, right encoder in ADI ports C & D (reversed)
+    .withSensors(ADIEncoder{'A', 'B'}, ADIEncoder{'E', 'F', true}, ADIEncoder{'G','H',1})
+    // specify the tracking wheels diameter (2.75 in), track (7 in), and TPR (360)
+    .withOdometry({{2.75_in, 4.4_in,4.7_in,2.75_in}, quadEncoderTPR}, StateMode::CARTESIAN)
+    .buildOdometry();
 	expansion.set_value(0);
 }
 
@@ -379,11 +316,25 @@ bool pa = false, pb = false;
 bool cco = false;
 
 void opcontrol() {
-	lcd::print(0,"aaaa");	
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
-	//in.reset();
-	//in.tare();
+	
+	std::shared_ptr<OdomChassisController> chassis =
+ 	ChassisControllerBuilder()
+    .withMotors(11,-1,-2,12) 
+    // green gearset, 4 inch wheel diameter, 11.5 inch wheel track
+    .withDimensions(AbstractMotor::gearset::blue, {{4_in, 11.5_in}, imev5GreenTPR})
+    // left encoder in ADI ports A & B, right encoder in ADI ports C & D (reversed)
+    .withSensors(ADIEncoder{'A', 'B'}, ADIEncoder{'E', 'F', true}, ADIEncoder{'G','H',1})
+    // specify the tracking wheels diameter (2.75 in), track (7 in), and TPR (360)
+    .withOdometry({{2.75_in, 4.72_in,3_in,2.75_in}, quadEncoderTPR}, StateMode::CARTESIAN)
+    .buildOdometry();
 	while (true){
+		std::string ff = chassis->OdomChassisController::getState().str(1_in,"_in",1_deg,"_deg");
+		ff = ff.substr(12);
+		pros::lcd::print(0,"%s",ff.c_str());	
+		//double ox = chassis->OdomChassisController::getState().
+		//double oy = chassis->OdomChassisController::getState().
+		//double otheta = chassis->OdomChassisController::getState().
 	/*
 		ne = master.get_analog(ANALOG_LEFT_Y) - master.get_analog(ANALOG_RIGHT_X) - master.get_analog(ANALOG_LEFT_X);
 		nw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) + master.get_analog(ANALOG_LEFT_X);
@@ -407,7 +358,7 @@ void opcontrol() {
 		se = cos(tilt*M_PI/180)*m - master.get_analog(ANALOG_RIGHT_X);
 		sw = sin(tilt*M_PI/180)*m + master.get_analog(ANALOG_RIGHT_X);
 		ne = sin(tilt*M_PI/180)*m - master.get_analog(ANALOG_RIGHT_X);
-		if(master.get_digital(E_CONTROLLER_DIGITAL_LEFT)&&master.get_digital(E_CONTROLLER_DIGITAL_A)){
+		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT)&&master.get_digital(pros::E_CONTROLLER_DIGITAL_A)){
 			in.reset();
 			in.tare();
 		}
@@ -448,11 +399,11 @@ targetVelocity = 500;
 			targetVelocity = 0;
 		}
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_A)==1&&pa==0){
-			air.set_value(1);
+			air.pros::ADIDigitalOut::set_value(1);
 			pros::delay(180);
-			air.set_value(0);
+			air.pros::ADIDigitalOut::set_value(0);
 		}
-		if(master.get_digital(E_CONTROLLER_DIGITAL_LEFT)==1&&pb==0){
+		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT)==1&&pb==0){
 			if(cco){
 				expansion.set_value(false);
 				cco = false;
@@ -466,11 +417,11 @@ targetVelocity = 500;
 		pa = master.get_digital(pros::E_CONTROLLER_DIGITAL_A);
 		pb = master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT);
 		pros::lcd::print(1,"x:%lf y:%lf",x,y);
-		lcd::print(2,"theta:%lf",theta);
-		lcd::print(3,"ltw:%d rtw:%d stw:%d", ltw.get_value(), rtw.get_value(), stw.get_value());
-		delay(20);
+		pros::lcd::print(2,"theta:%lf",theta);
+		pros::lcd::print(3,"ltw:%d rtw:%d stw:%d", ltw.get_value(), rtw.get_value(), stw.get_value());
+		pros::delay(20);
 	}
-	expansion.set_value(0);
-	air.set_value(0);
+	expansion.pros::ADIDigitalOut::set_value(0);
+	air.pros::ADIDigitalOut::set_value(0);
 }
 
