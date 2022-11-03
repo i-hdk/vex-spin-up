@@ -25,7 +25,7 @@ pros::Motor fb (13, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS
 //flywheel pid
 const double threshold = 50;
 const double kV = 20;
-const double kP = 40; //30
+const double kP = 40; 
 double targetVelocity;
 
 //odometry variables
@@ -37,41 +37,41 @@ double prevL,prevR,prevS,L,R,S;
 double h,i,a; //distance travelled, half of angle change, angle change
 double h2; //same but for strafe
 double r,r2; //cirle radius
+double ox,oy,otheta; //version 2 of odon
 
-double kp = 26, ki = 0.001, kd = 0.01; //ki 0.0003 0.0001 kp 20 kd 0.07 kp 25
+double kp = 300, ki = 0.001, kd = 0.01; 
 double ultotalerror,lltotalerror;
 double ulpreverror = 0,llpreverror=0,llerrordiff = 0,ulerrordiff;
 //added variables to make robot move straighter path
 double distpreverror, disterrordiff, disttotalerror;
+
+//drive straight
+double prevFta;
+double ktp = 1000;
 void destodom(double target_x, double target_y){
 	double xcom, ycom, uld, lld, rta, fta, dist;
-	nw.tare_position();ne.tare_position();sw.tare_position();se.tare_position();
-	xcom = target_x-x, ycom = target_y-y;
+	xcom = target_x-ox, ycom = target_y-oy;
 	if(xcom>0) fta = atan(ycom/xcom);
 	else fta = atan(ycom/xcom)-M_PI;
 	if(isnan(fta)||xcom==0) fta = M_PI/2;
-	rta = fta-(M_PI/4-theta);
+	if(disterrordiff>1){
+		fta-=(fta-prevFta)*ktp;
+	}
+	rta = fta-(M_PI/4-otheta);
 	dist = sqrt(xcom*xcom+ycom*ycom);
 	//added manipulations to dist line (reversed the order of mulitplying by k constants):
 	disttotalerror+=dist;
 	disterrordiff = dist - distpreverror;
 	distpreverror = dist;
 	double mag = dist*kp + disterrordiff*kd + disttotalerror*ki;
-	if(mag>600) mag = 600;
+	if(mag>12000) mag = 12000;
 	uld = cos(rta)*dist;
 	lld = sin(rta)*dist;
-	ultotalerror+=uld;
-	lltotalerror+=lld;
-	ulerrordiff = uld - ulpreverror;
-	llerrordiff = lld - llpreverror;
-	ulpreverror = uld;
-	llpreverror = lld;
-	double uldvel = uld*kp+ulerrordiff*kd+ultotalerror*ki;
-	double lldvel = lld*kp+llerrordiff*kd+lltotalerror*ki;
-	nw.move_velocity(cos(rta)*mag);
-	se.move_velocity(cos(rta)*mag);
-	ne.move_velocity(sin(rta)*mag);
-	sw.move_velocity(sin(rta)*mag);
+	nw.move_voltage(cos(rta)*mag);
+	se.move_voltage(cos(rta)*mag);
+	ne.move_voltage(sin(rta)*mag);
+	sw.move_voltage(sin(rta)*mag);
+	prevFta = fta;
 }
 
 void odometry(){
@@ -79,7 +79,18 @@ void odometry(){
 	stw.reset();
 	rtw.reset();
 	x = 0, y = 0, theta = 0;
+	ox = 0, oy = 0, otheta = 0;
 	prevL = prevR = prevS = 0;
+	std::shared_ptr<OdomChassisController> chassis =
+ 	ChassisControllerBuilder()
+    .withMotors(11,-1,-2,12) 
+    // green gearset, 4 inch wheel diameter, 11.5 inch wheel track
+    .withDimensions(AbstractMotor::gearset::blue, {{4_in, 11.5_in}, imev5GreenTPR})
+    // left encoder in ADI ports A & B, right encoder in ADI ports C & D (reversed)
+    .withSensors(ADIEncoder{'A', 'B'}, ADIEncoder{'E', 'F', true}, ADIEncoder{'G','H',1})
+    // specify the tracking wheels diameter (2.75 in), track (7 in), and TPR (360)
+    .withOdometry({{2.75_in, 4.72_in,3_in,2.75_in}, quadEncoderTPR}, StateMode::CARTESIAN)
+    .buildOdometry();
 	while(1){
 		L = (ltw.get_value()-prevL)/360*twd*M_PI;
 		R = (rtw.get_value()-prevR)/360*twd*M_PI;
@@ -117,13 +128,47 @@ void odometry(){
 				power = 0;
 			}
 			else{
-				power = kV * targetVelocity + kP*error; 
+				power = kV * targetVelocity + kP*error; //kv supposed to be slope
 			}
 			fa.move_voltage(power);
 			fb.move_voltage(power);
 		}
-	pros::delay(10);
-	//destodom(0,120);
+		std::string ff = chassis->OdomChassisController::getState().str(1_in,"_in",1_deg,"_deg");
+		ff = ff.substr(10);
+		std::string aa = "";
+		double vall = 0;
+		for(int i = ff.find("x=")+1; i < ff.find("_in"); i++) aa+= ff[i];
+		for(int i = 0; i < aa.find("."); i++){
+			vall+= pow(10,aa.find(".")-1-i)*(aa[i]-'0'); 
+		}
+		for(int i = 0; i < aa.length()-aa.find(".")-1; i++){
+			vall += pow(10, -1*(i+1))*aa[i+aa.find(".")+1];
+		}
+		ox = vall;
+		ff = ff.substr(ff.find("_in")+1);
+		aa = "";
+		vall = 0;
+		for(int i = ff.find("y=")+1; i < ff.find("_in"); i++) aa+= ff[i];
+		for(int i = 0; i < aa.find("."); i++){
+			vall+= pow(10,aa.find(".")-1-i)*(aa[i]-'0'); 
+		}
+		for(int i = 0; i < aa.length()-aa.find(".")-1; i++){
+			vall += pow(10, -1*(i+1))*aa[i+aa.find(".")+1];
+		}
+		oy = vall;
+		aa = "";
+		vall = 0;
+		for(int i = ff.find("theta=")+1; i < ff.find("_deg"); i++) aa+= ff[i];
+		for(int i = 0; i < aa.find("."); i++){
+			vall+= pow(10,aa.find(".")-1-i)*(aa[i]-'0'); 
+		}
+		for(int i = 0; i < aa.length()-aa.find(".")-1; i++){
+			vall += pow(10, -1*(i+1))*aa[i+aa.find(".")+1];
+		}
+		otheta = vall;
+		//USING RADIANS
+		otheta = otheta * M_PI/180;
+		pros::delay(10);
 	}
 }
 
@@ -144,6 +189,12 @@ void initialize() {
 }void disabled() {}void competition_initialize() {}
 
 void getTo(double xx, double yy){
+	double xcom, ycom, uld, lld, rta, fta, dist;
+	xcom = xx-x, ycom = yy-y;
+	if(xcom>0) fta = atan(ycom/xcom);
+	else fta = atan(ycom/xcom)-M_PI;
+	if(isnan(fta)||xcom==0) fta = M_PI/2;
+	prevFta = fta;
 	while(abs(xx-x)>0.1||abs(yy-y)>0.1){
 		destodom(xx,yy);
 		pros::delay(20);
@@ -297,16 +348,6 @@ void URauton2(){
 }
 
 void autonomous() {
-	std::shared_ptr<OdomChassisController> chassis =
- 	ChassisControllerBuilder()
-    .withMotors(11,-1,-2,12) 
-    // green gearset, 4 inch wheel diameter, 11.5 inch wheel track
-    .withDimensions(AbstractMotor::gearset::blue, {{4_in, 11.5_in}, imev5GreenTPR})
-    // left encoder in ADI ports A & B, right encoder in ADI ports C & D (reversed)
-    .withSensors(ADIEncoder{'A', 'B'}, ADIEncoder{'E', 'F', true}, ADIEncoder{'G','H',1})
-    // specify the tracking wheels diameter (2.75 in), track (7 in), and TPR (360)
-    .withOdometry({{2.75_in, 4.4_in,4.7_in,2.75_in}, quadEncoderTPR}, StateMode::CARTESIAN)
-    .buildOdometry();
 	expansion.set_value(0);
 }
 
@@ -317,24 +358,7 @@ bool cco = false;
 
 void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
-	
-	std::shared_ptr<OdomChassisController> chassis =
- 	ChassisControllerBuilder()
-    .withMotors(11,-1,-2,12) 
-    // green gearset, 4 inch wheel diameter, 11.5 inch wheel track
-    .withDimensions(AbstractMotor::gearset::blue, {{4_in, 11.5_in}, imev5GreenTPR})
-    // left encoder in ADI ports A & B, right encoder in ADI ports C & D (reversed)
-    .withSensors(ADIEncoder{'A', 'B'}, ADIEncoder{'E', 'F', true}, ADIEncoder{'G','H',1})
-    // specify the tracking wheels diameter (2.75 in), track (7 in), and TPR (360)
-    .withOdometry({{2.75_in, 4.72_in,3_in,2.75_in}, quadEncoderTPR}, StateMode::CARTESIAN)
-    .buildOdometry();
 	while (true){
-		std::string ff = chassis->OdomChassisController::getState().str(1_in,"_in",1_deg,"_deg");
-		ff = ff.substr(12);
-		pros::lcd::print(0,"%s",ff.c_str());	
-		//double ox = chassis->OdomChassisController::getState().
-		//double oy = chassis->OdomChassisController::getState().
-		//double otheta = chassis->OdomChassisController::getState().
 	/*
 		ne = master.get_analog(ANALOG_LEFT_Y) - master.get_analog(ANALOG_RIGHT_X) - master.get_analog(ANALOG_LEFT_X);
 		nw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) + master.get_analog(ANALOG_LEFT_X);
@@ -416,8 +440,8 @@ targetVelocity = 500;
 		}
 		pa = master.get_digital(pros::E_CONTROLLER_DIGITAL_A);
 		pb = master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT);
-		pros::lcd::print(1,"x:%lf y:%lf",x,y);
-		pros::lcd::print(2,"theta:%lf",theta);
+		pros::lcd::print(1,"x:%lf y:%lf",ox,oy);
+		pros::lcd::print(2,"theta:%lf",(otheta*180/M_PI));
 		pros::lcd::print(3,"ltw:%d rtw:%d stw:%d", ltw.get_value(), rtw.get_value(), stw.get_value());
 		pros::delay(20);
 	}
