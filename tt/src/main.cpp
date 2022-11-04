@@ -224,9 +224,10 @@ void turnTo(double aa){
 		pros::delay(10);
 	}
 	else{
-		while(theta<aa+oldT)
+		while(theta<aa+oldT){
 		tr(80);
 		pros::delay(10);
+		}
 	}
 	tr(0);
 }
