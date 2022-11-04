@@ -17,7 +17,8 @@ pros::ADIEncoder rtw ('e', 'f', 1);
 pros::ADIEncoder stw ('g', 'h', 1);
 pros::ADIDigitalOut air ('c');
 pros::ADIDigitalOut expansion('d');
-
+pros::Motor i2 (10, pros::E_MOTOR_GEARSET_18, 0, pros::E_MOTOR_ENCODER_ROTATIONS);
+ 
 //flywheel
 pros::Motor fa (17, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS); 
 pros::Motor fb (13, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS);
@@ -135,6 +136,7 @@ void odometry(){
 		}
 		std::string ff = chassis->OdomChassisController::getState().str(1_in,"_in",1_deg,"_deg");
 		ff = ff.substr(10);
+		pros::lcd::print(0,"%s",ff.c_str());
 		std::string aa = "";
 		double vall = 0;
 		for(int i = ff.find("x=")+1; i < ff.find("_in"); i++) aa+= ff[i];
@@ -399,23 +401,26 @@ void opcontrol() {
 		}
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)==1){
 			intake.move_velocity(600);
+			i2.move_velocity(200);
 		}
 		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)==1){
 			intake.move_velocity(-600);
+			i2.move_velocity(-200);
 		}
 		else{
 			intake.move_velocity(0);
+			i2.move_velocity(0);
 		}
 
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)==1){
-			targetVelocity = 600;
+			targetVelocity = 500;
 
 		}
 		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)==1){
 			//targetVelocity = -380;
 		    //fa.move_velocity(-350);
 			//fb.move_velocity(-350);
-targetVelocity = 500;
+targetVelocity = 400;
 		}
 		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN)==1){
 			targetVelocity = 500;
