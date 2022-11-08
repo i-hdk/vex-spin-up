@@ -40,7 +40,7 @@ double h2; //same but for strafe
 double r,r2; //cirle radius
 double ox,oy,otheta; //version 2 of odon
 
-double kp = 300, ki = 0.001, kd = 0.01; 
+double kp = 2000, ki = 1, kd = 10; 
 double ultotalerror,lltotalerror;
 double ulpreverror = 0,llpreverror=0,llerrordiff = 0,ulerrordiff;
 //added variables to make robot move straighter path
@@ -48,7 +48,7 @@ double distpreverror, disterrordiff, disttotalerror;
 
 //drive straight
 double prevFta;
-double ktp = 1000;
+double ktp = 800;
 void destodom(double target_x, double target_y){
 	double xcom, ycom, uld, lld, rta, fta, dist;
 	xcom = target_x-ox, ycom = target_y-oy;
@@ -138,36 +138,12 @@ void odometry(){
 		ff = ff.substr(10);
 		pros::lcd::print(0,"%s",ff.c_str());
 		std::string aa = "";
-		double vall = 0;
-		for(int i = ff.find("x=")+1; i < ff.find("_in"); i++) aa+= ff[i];
-		for(int i = 0; i < aa.find("."); i++){
-			vall+= pow(10,aa.find(".")-1-i)*(aa[i]-'0'); 
-		}
-		for(int i = 0; i < aa.length()-aa.find(".")-1; i++){
-			vall += pow(10, -1*(i+1))*aa[i+aa.find(".")+1];
-		}
+		double vall = stod(ff.substr(ff.find("x=")+2,ff.find("_in")));
 		ox = vall;
 		ff = ff.substr(ff.find("_in")+1);
-		aa = "";
-		vall = 0;
-		for(int i = ff.find("y=")+1; i < ff.find("_in"); i++) aa+= ff[i];
-		for(int i = 0; i < aa.find("."); i++){
-			vall+= pow(10,aa.find(".")-1-i)*(aa[i]-'0'); 
-		}
-		for(int i = 0; i < aa.length()-aa.find(".")-1; i++){
-			vall += pow(10, -1*(i+1))*aa[i+aa.find(".")+1];
-		}
-		oy = vall;
-		aa = "";
-		vall = 0;
-		for(int i = ff.find("theta=")+1; i < ff.find("_deg"); i++) aa+= ff[i];
-		for(int i = 0; i < aa.find("."); i++){
-			vall+= pow(10,aa.find(".")-1-i)*(aa[i]-'0'); 
-		}
-		for(int i = 0; i < aa.length()-aa.find(".")-1; i++){
-			vall += pow(10, -1*(i+1))*aa[i+aa.find(".")+1];
-		}
-		otheta = vall;
+		oy = stod(ff.substr(ff.find("y=")+2,ff.find("_in")));
+		ff = ff.substr(ff.find("_in")+1);
+		otheta = stod(ff.substr(ff.find("a=")+2,ff.find("_")));
 		//USING RADIANS
 		otheta = otheta * M_PI/180;
 		pros::delay(10);
@@ -352,6 +328,9 @@ void URauton2(){
 
 void autonomous() {
 	expansion.set_value(0);
+	getTo(0,24);
+	pros::delay(1000);
+	getTo(0,4);
 }
 
 
