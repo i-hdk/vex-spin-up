@@ -381,14 +381,17 @@ void opcontrol() {
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)==1){
 			intake.move_velocity(600);
 			i2.move_velocity(200);
+			roller.move_velocity(200);
 		}
 		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)==1){
 			intake.move_velocity(-600);
 			i2.move_velocity(-200);
+			roller.move_velocity(-200);
 		}
 		else{
 			intake.move_velocity(0);
 			i2.move_velocity(0);
+			roller.move_velocity(0);
 		}
 
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)==1){
@@ -399,7 +402,7 @@ void opcontrol() {
 			//targetVelocity = -380;
 		    //fa.move_velocity(-350);
 			//fb.move_velocity(-350);
-targetVelocity = 400;
+			targetVelocity = 400;
 		}
 		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN)==1){
 			targetVelocity = 500;
