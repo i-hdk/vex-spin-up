@@ -6,7 +6,7 @@ using namespace okapi;
 
 pros::Controller master(pros::E_CONTROLLER_MASTER);
 pros::Imu in(20);
-pros::Motor roller (15, pros::E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_ROTATIONS);
+pros::Motor roller (15, pros::E_MOTOR_GEARSET_18, 0, pros::E_MOTOR_ENCODER_ROTATIONS);
 pros::Motor sw (12, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS);
 pros::Motor se (2, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS);
 pros::Motor nw (11, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS);
@@ -20,8 +20,8 @@ pros::ADIDigitalOut expansion('d');
 pros::Motor i2 (10, pros::E_MOTOR_GEARSET_18, 0, pros::E_MOTOR_ENCODER_ROTATIONS);
  
 //flywheel
-pros::Motor fa (17, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS); 
-pros::Motor fb (13, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS);
+pros::Motor fa (17, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS); 
+pros::Motor fb (13, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS);
 
 //flywheel pid
 const double threshold = 50;
@@ -40,7 +40,8 @@ double h2; //same but for strafe
 double r,r2; //cirle radius
 double ox,oy,otheta; //version 2 of odon
 
-double kp = 2000, ki = 1, kd = 10; 
+double kp = 1100, ki = 0.5, kd = 260; //1.9 for short
+//0.5 for 72 (i think?)
 double ultotalerror,lltotalerror;
 double ulpreverror = 0,llpreverror=0,llerrordiff = 0,ulerrordiff;
 //added variables to make robot move straighter path
@@ -48,16 +49,14 @@ double distpreverror, disterrordiff, disttotalerror;
 
 //drive straight
 double prevFta;
-double ktp = 800;
-void destodom(double target_x, double target_y){
+double ktp = 0.004;
+void destodom(double target_x, double target_y){ //maybe add target orientation?
 	double xcom, ycom, uld, lld, rta, fta, dist;
 	xcom = target_x-ox, ycom = target_y-oy;
 	if(xcom>0) fta = atan(ycom/xcom);
 	else fta = atan(ycom/xcom)-M_PI;
 	if(isnan(fta)||xcom==0) fta = M_PI/2;
-	if(disterrordiff>1){
 		fta-=(fta-prevFta)*ktp;
-	}
 	rta = fta-(M_PI/4-otheta);
 	dist = sqrt(xcom*xcom+ycom*ycom);
 	//added manipulations to dist line (reversed the order of mulitplying by k constants):
@@ -74,7 +73,7 @@ void destodom(double target_x, double target_y){
 	sw.move_voltage(sin(rta)*mag);
 	prevFta = fta;
 }
-
+std::shared_ptr<OdomChassisController> chassis;
 void odometry(){
 	ltw.reset();
 	stw.reset();
@@ -82,7 +81,7 @@ void odometry(){
 	x = 0, y = 0, theta = 0;
 	ox = 0, oy = 0, otheta = 0;
 	prevL = prevR = prevS = 0;
-	std::shared_ptr<OdomChassisController> chassis =
+	chassis =
  	ChassisControllerBuilder()
     .withMotors(11,-1,-2,12) 
     // green gearset, 4 inch wheel diameter, 11.5 inch wheel track
@@ -167,6 +166,7 @@ void initialize() {
 }void disabled() {}void competition_initialize() {}
 
 void getTo(double xx, double yy){
+	disttotalerror = 0;
 	double xcom, ycom, uld, lld, rta, fta, dist;
 	xcom = xx-x, ycom = yy-y;
 	if(xcom>0) fta = atan(ycom/xcom);
@@ -190,24 +190,17 @@ void tr(double vel){
 	sw = vel;
 }
 
-double tkP = 30;
+double tkP = 10000;
 void turnTo(double aa){
-	//speed used to be 50
-	double oldT = theta;
-	aa = aa*M_PI/180;
-	if(theta>oldT+aa)
-	while(theta>aa+oldT){
-		//tr((oldT+aa-theta)*tkP);
-		tr(-80);
+	while(otheta<aa*M_PI/180-0.03||otheta>aa*M_PI/180+0.03){
+		double te = otheta - aa*M_PI/180;
+		pros::lcd::print(5,"%lf",te);
+		nw.move_voltage(tkP*te*-1);
+		ne.move_voltage(tkP*te);
+		sw.move_voltage(tkP*te*-1);
+		se.move_voltage(tkP*te);
 		pros::delay(10);
 	}
-	else{
-		while(theta<aa+oldT){
-		tr(80);
-		pros::delay(10);
-		}
-	}
-	tr(0);
 }
 
 void shoot(){
@@ -327,10 +320,23 @@ void URauton2(){
 }
 
 void autonomous() {
+	/*
 	expansion.set_value(0);
-	getTo(0,24);
-	pros::delay(1000);
-	getTo(0,4);
+	nw.move_velocity(-100);
+	se.move_velocity(-100);
+	ne.move_velocity(-100);
+	sw.move_velocity(-100);
+	pros::delay(500);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	roller.move_velocity(80);
+	pros::delay(200);
+	roller.move_velocity(0);
+	ki = 1.9;
+	getTo(0,5);*/
+	turnTo(-90);
 }
 
 
@@ -348,7 +354,7 @@ void opcontrol() {
 		sw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) - master.get_analog(ANALOG_LEFT_X);
 */
 
-		double tilt = 45+in.get_heading() - 90; //for upper right auton, -90
+		double tilt = 45+in.get_heading() ; //for upper right auton, -90
 		if(master.get_analog(ANALOG_LEFT_X)==0){
 			if(master.get_analog(ANALOG_LEFT_Y)<0) tilt+=180;
 		}
