@@ -89,7 +89,7 @@ void odometry(){
     // left encoder in ADI ports A & B, right encoder in ADI ports C & D (reversed)
     .withSensors(ADIEncoder{'A', 'B'}, ADIEncoder{'E', 'F', true}, ADIEncoder{'G','H',1})
     // specify the tracking wheels diameter (2.75 in), track (7 in), and TPR (360)
-    .withOdometry({{2.75_in, 4.72_in,3_in,2.75_in}, quadEncoderTPR}, StateMode::CARTESIAN)
+    .withOdometry({{2.75_in, 4.58_in,3_in,2.75_in}, quadEncoderTPR}, StateMode::CARTESIAN)
     .buildOdometry();
 	while(1){
 		L = (ltw.get_value()-prevL)/360*twd*M_PI;
@@ -168,12 +168,12 @@ void initialize() {
 void getTo(double xx, double yy){
 	disttotalerror = 0;
 	double xcom, ycom, uld, lld, rta, fta, dist;
-	xcom = xx-x, ycom = yy-y;
+	xcom = xx-ox, ycom = yy-oy;
 	if(xcom>0) fta = atan(ycom/xcom);
 	else fta = atan(ycom/xcom)-M_PI;
 	if(isnan(fta)||xcom==0) fta = M_PI/2;
 	prevFta = fta;
-	while(abs(xx-x)>0.1||abs(yy-y)>0.1){
+	while(abs(xx-ox)>0.1||abs(yy-oy)>0.1){
 		destodom(xx,yy);
 		pros::delay(20);
 	}
@@ -401,7 +401,7 @@ void opcontrol() {
 		}
 
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)==1){
-			targetVelocity = 500;
+			targetVelocity = 600;
 
 		}
 		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)==1){
