@@ -14,7 +14,7 @@ pros::Motor ne (1, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS)
 pros::Motor intake(16, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS); 
 pros::ADIEncoder ltw ('a', 'b', 0); 
 pros::ADIEncoder rtw ('e', 'f', 1);
-pros::ADIEncoder stw ('g', 'h', 1);
+pros::ADIEncoder stw ('g', 'h', 0);
 pros::ADIDigitalOut air ('c');
 pros::ADIDigitalOut expansion('d');
 pros::Motor i2 (10, pros::E_MOTOR_GEARSET_18, 0, pros::E_MOTOR_ENCODER_ROTATIONS);
@@ -27,12 +27,12 @@ pros::Motor fb (13, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS
 const double threshold = 50;
 const double kV = 20;
 const double kP = 40; 
-double targetVelocity;
+double targetVelocity, targetVelocity2 =  250;
 
 //odometry variables
 double wd = 3.25; //wheel diameter
 double twd = 2.75; //tracking wheel diamter
-double sl=2.36, ss=3, sr=2.36; //distance from tracking wheels to center
+double sl=2.85, ss=3.02, sr=1.73; //distance from tracking wheels to center
 double x,y,theta;
 double prevL,prevR,prevS,L,R,S;
 double h,i,a; //distance travelled, half of angle change, angle change
@@ -75,6 +75,8 @@ void destodom(double target_x, double target_y){ //maybe add target orientation?
 }
 std::shared_ptr<OdomChassisController> chassis;
 void odometry(){
+	in.reset();
+	in.tare();
 	ltw.reset();
 	stw.reset();
 	rtw.reset();
@@ -91,6 +93,7 @@ void odometry(){
     // specify the tracking wheels diameter (2.75 in), track (7 in), and TPR (360)
     .withOdometry({{2.75_in, 4.58_in,3_in,2.75_in}, quadEncoderTPR}, StateMode::CARTESIAN)
     .buildOdometry();
+	double prevhe = 0;
 	while(1){
 		L = (ltw.get_value()-prevL)/360*twd*M_PI;
 		R = (rtw.get_value()-prevR)/360*twd*M_PI;
@@ -99,7 +102,14 @@ void odometry(){
 		prevR = (double)(rtw.get_value());
 		prevS = (double)(stw.get_value());
 		a = (L-R)/(sl+sr); //added sr
-		if(a){
+		double headingdiff = in.get_heading()-prevhe;
+		prevhe = in.get_heading();
+		if(headingdiff<-50) headingdiff+=360;
+		else if(headingdiff >50) headingdiff-=360;
+		headingdiff*=M_PI/180;
+		a = headingdiff;
+		pros::lcd::print(5,"a%lf",a);
+		if(a&&!isinf(a)&&!isnan(a)){
 			r = R/a;
 			i = a/2.0;
 			h = ((r+sr)*sin(i))*2;
@@ -114,13 +124,16 @@ void odometry(){
 		double p = i+theta;
 		y = y + h*cos(p) + h2*(-1*sin(p));
 		x = x + h*sin(p) + h2*cos(p);
-		theta+=a;
+		if(!isinf(a)&&!isnan(a))theta+=a;
 		//theta = theta%(2*M_PI); 
 		//theta+=2*M_PI;
 		//while(theta-2*M_PI>=0) theta-=2*M_PI;
 		if(targetVelocity>-300){
-			double error = targetVelocity - ((fa.get_actual_velocity()+fb.get_actual_velocity())/2);
-			double power;
+			//double error = targetVelocity - ((fa.get_actual_velocity()+fb.get_actual_velocity())/2);
+			//250 and 600 for shoot from mid
+			double error = targetVelocity - fa.get_actual_velocity();
+			double error2 = targetVelocity2 - fb.get_actual_velocity();
+			double power,power2;
 			if(error > threshold){
 				power = 12000;
 			}
@@ -130,8 +143,17 @@ void odometry(){
 			else{
 				power = kV * targetVelocity + kP*error; //kv supposed to be slope
 			}
+			if(error2 > threshold){
+				power2 = 12000;
+			}
+			else if(error2 < -threshold){
+				power2 = 0;
+			}
+			else{
+				power2 = kV * targetVelocity2 + kP*error2; //kv supposed to be slope
+			}
+			fb.move_voltage(power2);
 			fa.move_voltage(power);
-			fb.move_voltage(power);
 		}
 		std::string ff = chassis->OdomChassisController::getState().str(1_in,"_in",1_deg,"_deg");
 		ff = ff.substr(10);
@@ -320,12 +342,28 @@ void URauton2(){
 }
 
 void autonomous() {
-	/*
 	expansion.set_value(0);
-	nw.move_velocity(-100);
-	se.move_velocity(-100);
-	ne.move_velocity(-100);
-	sw.move_velocity(-100);
+
+	targetVelocity2 = 400;
+	targetVelocity = 400;
+	pros::delay(3000);
+	intake.move_velocity(600);
+			i2.move_velocity(200);
+			roller.move_velocity(200);
+	pros::delay(160);
+	intake.move_velocity(0);
+			i2.move_velocity(0);
+			roller.move_velocity(0);
+			
+			
+			pros::delay(2000);
+	targetVelocity2 = 0;
+	targetVelocity = 0;
+/*
+	nw.move_velocity(-600);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
 	pros::delay(500);
 	nw.move_velocity(0);
 	se.move_velocity(0);
@@ -334,9 +372,11 @@ void autonomous() {
 	roller.move_velocity(80);
 	pros::delay(200);
 	roller.move_velocity(0);
-	ki = 1.9;
-	getTo(0,5);*/
-	turnTo(-90);
+	*/
+
+	//ki = 1.9;
+	//getTo(0,5);
+	//turnTo(-90);
 }
 
 
@@ -347,13 +387,13 @@ bool cco = false;
 void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
 	while (true){
-	/*
+	
 		ne = master.get_analog(ANALOG_LEFT_Y) - master.get_analog(ANALOG_RIGHT_X) - master.get_analog(ANALOG_LEFT_X);
 		nw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) + master.get_analog(ANALOG_LEFT_X);
 		se = master.get_analog(ANALOG_LEFT_Y) - master.get_analog(ANALOG_RIGHT_X) + master.get_analog(ANALOG_LEFT_X);
 		sw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) - master.get_analog(ANALOG_LEFT_X);
-*/
 
+/*
 		double tilt = 45+in.get_heading() ; //for upper right auton, -90
 		if(master.get_analog(ANALOG_LEFT_X)==0){
 			if(master.get_analog(ANALOG_LEFT_Y)<0) tilt+=180;
@@ -365,11 +405,12 @@ void opcontrol() {
 			tilt-=(270-atan(master.get_analog(ANALOG_LEFT_Y)/master.get_analog(ANALOG_LEFT_X))*180/M_PI);
 		}
 		double m = (master.get_analog(ANALOG_LEFT_Y))*(master.get_analog(ANALOG_LEFT_Y)) + (master.get_analog(ANALOG_LEFT_X))*(master.get_analog(ANALOG_LEFT_X));
+		m*=2;
 		m = sqrt(m);
 		nw = cos(tilt*M_PI/180)*m + master.get_analog(ANALOG_RIGHT_X);
 		se = cos(tilt*M_PI/180)*m - master.get_analog(ANALOG_RIGHT_X);
 		sw = sin(tilt*M_PI/180)*m + master.get_analog(ANALOG_RIGHT_X);
-		ne = sin(tilt*M_PI/180)*m - master.get_analog(ANALOG_RIGHT_X);
+		ne = sin(tilt*M_PI/180)*m - master.get_analog(ANALOG_RIGHT_X);*/
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT)&&master.get_digital(pros::E_CONTROLLER_DIGITAL_A)){
 			in.reset();
 			in.tare();
@@ -415,6 +456,8 @@ void opcontrol() {
 		}
 		else{
 			targetVelocity = 0;
+			//fa.move_velocity(0);
+			//fb.move_velocity(0);
 		}
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_A)==1&&pa==0){
 			air.pros::ADIDigitalOut::set_value(1);
@@ -434,9 +477,10 @@ void opcontrol() {
 		}
 		pa = master.get_digital(pros::E_CONTROLLER_DIGITAL_A);
 		pb = master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT);
-		pros::lcd::print(1,"x:%lf y:%lf",ox,oy);
-		pros::lcd::print(2,"theta:%lf",(otheta*180/M_PI));
+		pros::lcd::print(1,"x:%lf y:%lf",x,y);
+		pros::lcd::print(2,"theta:%lf",(theta*180/M_PI));
 		pros::lcd::print(3,"ltw:%d rtw:%d stw:%d", ltw.get_value(), rtw.get_value(), stw.get_value());
+		pros::lcd::print(4,"imu%lf",in.get_heading());
 		pros::delay(20);
 	}
 	expansion.pros::ADIDigitalOut::set_value(0);
