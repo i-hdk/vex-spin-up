@@ -23,10 +23,15 @@ pros::ADIDigitalOut expansion('d');
 pros::Motor fa (17, pros::E_MOTOR_GEARSET_06, 1, pros::E_MOTOR_ENCODER_ROTATIONS); 
 pros::Motor fb (13, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS);
 
+//coloring
+bool red;
+pros::Optical optical_sensor(21);
+  pros::c::optical_rgb_s_t rgb_value;
+
 //flywheel pid
 const double threshold = 50;
 const double kV = 20.202;
-const double kP = 5;
+const double kP = 1;
 const double kD = 150;
 double afpe = 0, bfpe = 0;
 double targetVelocity, targetVelocity2 =  250;
@@ -42,7 +47,7 @@ double h2; //same but for strafe
 double r,r2; //cirle radius
 double ox,oy,otheta; //version 2 of odon
 
-double kp = 1800, ki = 0.5, kd = 9000; //1.9 for short 8000
+double kp = 1800, ki = 0.5, kd = 10000; //1.9 for short 8000
 //0.5 for 72 (i think?)
 double ultotalerror,lltotalerror;
 double ulpreverror = 0,llpreverror=0,llerrordiff = 0,ulerrordiff;
@@ -183,6 +188,7 @@ void odometry(){
 }
 
 void initialize() {
+	red = true;
 	expansion.pros::ADIDigitalOut::set_value(0);
 	air.pros::ADIDigitalOut::set_value(0);
 	pros::lcd::initialize();
@@ -223,7 +229,7 @@ void tr(double vel){
 	sw = vel;
 }
 
-double tkP = 14000; double tkI = 1000, terror=0;
+double tkP = 10000; double tkI = 1000, terror=0;
 void turnTo(double aa){
 	terror = 0;
 	while(theta<aa*M_PI/180-0.03||theta>aa*M_PI/180+0.03){
@@ -385,9 +391,9 @@ void URauton2(){
 	sw.move_velocity(0);
 }
 
-void autonomous() {
+void awp(){
 	expansion.set_value(0);
-targetVelocity2 = 380;
+	targetVelocity2 = 380;
 	targetVelocity = 380;
 
 	nw.move_velocity(-600);
@@ -472,7 +478,97 @@ targetVelocity2 = 380;
 	roller.move_velocity(0);
 	targetVelocity2 = 0;
 	targetVelocity = 0;
+}
+
+void lrr(){
+
+	if(red){
+		rgb_value = optical_sensor.get_rgb();
+		int x = 0;
+		while(optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<30){
+			roller.move_velocity(50);
+			x++;
+			pros::delay(20);
+			if(x==4) return;
+		}
+		roller.move_velocity(0);
+		while(optical_sensor.get_hue()>215&&optical_sensor.get_hue()<230){
+			roller.move_velocity(-50);
+			pros::delay(20);
+		}
+		roller.move_velocity(0);
+		while(optical_sensor.get_hue()>=230&&optical_sensor.get_hue()<=360){
+			roller.move_velocity(50);
+			pros::delay(20);
+		}
 	
+		roller.move_velocity(0);
+	}
+}
+
+void rs(){
+	expansion.set_value(0);
+	targetVelocity2 = 380;
+	targetVelocity = 380;
+	roller.move_velocity(-200);
+	intake.move_velocity(-600);
+	ki = 2;
+	kd = 11000;
+	getTo(0,30);
+	kd = 9000;
+	intake.move_velocity(0);
+	roller.move_velocity(0);
+	turnTo(21); 
+	//getTo(0,5);
+	ki = 1;
+	//pros::delay(700);
+	targetVelocity2 = 415;
+	targetVelocity = 415;
+	intake.move_velocity(600);
+
+			roller.move_velocity(200);
+			
+	pros::delay(170);
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+			targetVelocity2 = 425;
+	targetVelocity = 425;
+			pros::delay(1000);
+	intake.move_velocity(600);
+			roller.move_velocity(190);
+	pros::delay(170);
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+			targetVelocity2 = 430;
+	targetVelocity = 430;
+			pros::delay(1000);
+
+	intake.move_velocity(600);
+			roller.move_velocity(200);
+	pros::delay(800);
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+			getTo(28,-3);
+			turnTo2(0);
+	nw.move_velocity(-600);
+			roller.move_velocity(100);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
+	pros::delay(500);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	//roller.move_velocity(80);
+	//pros::delay(150);
+	pros::delay(230);
+	roller.move_velocity(0);
+}
+
+void autonomous() {
+	//rs();
+	lrr();
 }
 
 
@@ -515,7 +611,7 @@ void opcontrol() {
 		}
 		
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
-			roller.move_velocity(200);
+			lrr();
 		}
 		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_B)){
 			roller.move_velocity(-200);
