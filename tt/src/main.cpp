@@ -483,25 +483,17 @@ void awp(){
 void lrr(){
 
 	if(red){
-		rgb_value = optical_sensor.get_rgb();
 		int x = 0;
-		while(optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<30){
-			roller.move_velocity(50);
-			x++;
-			pros::delay(20);
-			if(x==4) return;
-		}
-		roller.move_velocity(0);
-		while(optical_sensor.get_hue()>215&&optical_sensor.get_hue()<230){
-			roller.move_velocity(-50);
+		while(!(optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<20)){
+			roller.move_velocity(100);
 			pros::delay(20);
 		}
 		roller.move_velocity(0);
-		while(optical_sensor.get_hue()>=230&&optical_sensor.get_hue()<=360){
+		pros::delay(1000);
+		while((optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<20)){
 			roller.move_velocity(50);
 			pros::delay(20);
 		}
-	
 		roller.move_velocity(0);
 	}
 }
@@ -683,7 +675,7 @@ void opcontrol() {
 		pros::lcd::print(1,"x:%lf y:%lf",x,y);
 		pros::lcd::print(2,"theta:%lf",(theta*180/M_PI));
 		pros::lcd::print(3,"ltw:%d rtw:%d stw:%d", ltw.get_value(), rtw.get_value(), stw.get_value());
-		pros::lcd::print(4,"imu%lf",in.get_heading());
+		pros::lcd::print(4,"co%lf",optical_sensor.get_hue());
 		//pros::lcd::print(6,"tilt%lf",tilt);
 		pros::delay(20);
 	}
