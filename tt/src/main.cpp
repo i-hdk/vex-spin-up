@@ -25,8 +25,10 @@ pros::Motor fb (13, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATIONS
 
 //flywheel pid
 const double threshold = 50;
-const double kV = 20;
-const double kP = 20; 
+const double kV = 20.202;
+const double kP = 5;
+const double kD = 150;
+double afpe = 0, bfpe = 0;
 double targetVelocity, targetVelocity2 =  250;
 
 //odometry variables
@@ -128,12 +130,16 @@ void odometry(){
 		//theta = theta%(2*M_PI); 
 		//theta+=2*M_PI;
 		//while(theta-2*M_PI>=0) theta-=2*M_PI;
+		
+		
 		if(targetVelocity>-300){
 			//double error = targetVelocity - ((fa.get_actual_velocity()+fb.get_actual_velocity())/2);
 			//250 and 600 for shoot from mid
 			double error = targetVelocity - fa.get_actual_velocity();
 			double error2 = targetVelocity2 - fb.get_actual_velocity();
 			double power,power2;
+			double ad = error - afpe;
+			double bd = error2 - bfpe;
 			if(error > threshold){
 				power = 12000;
 			}
@@ -152,11 +158,14 @@ void odometry(){
 			else{
 				power2 = kV * targetVelocity2 + kP*error2; //kv supposed to be slope
 			}
+			afpe = error;
+			bfpe = error2;
 			fb.move_voltage(power2);
 			fa.move_voltage(power);
 			pros::lcd::print(7,"avel%lf",fa.get_actual_velocity());
-			pros::lcd::print(8,"bvel%lf",fb.get_actual_velocity());
+			pros::lcd::print(6,"bvel%lf",fb.get_actual_velocity());
 		}
+		
 		std::string ff = chassis->OdomChassisController::getState().str(1_in,"_in",1_deg,"_deg");
 		ff = ff.substr(10);
 		pros::lcd::print(0,"%s",ff.c_str());
@@ -214,7 +223,7 @@ void tr(double vel){
 	sw = vel;
 }
 
-double tkP = 11000; double tkI = 1000, terror=0;
+double tkP = 14000; double tkI = 1000, terror=0;
 void turnTo(double aa){
 	terror = 0;
 	while(theta<aa*M_PI/180-0.03||theta>aa*M_PI/180+0.03){
@@ -225,6 +234,33 @@ void turnTo(double aa){
 		ne.move_voltage(tkP*te+tkI*terror);
 		sw.move_voltage((tkP*te+tkI*terror)*-1);
 		se.move_voltage(tkP*te+tkI*terror);
+		pros::delay(10);
+	}
+	nw.move_voltage(0);
+		ne.move_voltage(0);
+		sw.move_voltage(0);
+		se.move_voltage(0);
+}
+
+void turnTo2(double aa){
+	terror = 0;
+	while(theta<aa*M_PI/180-0.03||theta>aa*M_PI/180+0.03){
+		double te = theta - aa*M_PI/180;
+		terror = terror +te;
+		pros::lcd::print(5,"%lf",te);
+		if(te>0){
+		nw.move_velocity(-120);
+		ne.move_velocity(120);
+		sw.move_velocity(-120);
+		se.move_velocity(120);
+		}
+		else{
+			nw.move_velocity(120);
+		ne.move_velocity(-120);
+		sw.move_velocity(120);
+		se.move_velocity(-120);
+		}
+		
 		pros::delay(10);
 	}
 	nw.move_voltage(0);
@@ -358,7 +394,7 @@ targetVelocity2 = 380;
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
 	sw.move_velocity(-600);
-	pros::delay(170);
+	pros::delay(180);
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
@@ -375,46 +411,65 @@ targetVelocity2 = 380;
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
-	ki = 11;
+	ki = 16;
 	turnTo(-20);
 	roller.move_velocity(-200);
 	intake.move_velocity(-600);
-	getTo(-2,12);
+	getTo(-1,11);
 	//getTo(0,5);
-	ki = 0.5;
-	getTo(39,50);
+	ki = 0.7;
+	pros::delay(700);
 	intake.move_velocity(0);
 	roller.move_velocity(0);
-	tkI = 105;
-	turnTo(-37.5); //38.5
-	targetVelocity2 = 375;
-	targetVelocity = 375;
+	getTo(39,50);
+	tkP = 45000;
+	tkI = 200; //120
+	turnTo2(-39); //38.5
+	tkP=12000;
+	targetVelocity2 = 320;
+	targetVelocity = 320;
 	intake.move_velocity(600);
 
 			roller.move_velocity(200);
-	pros::delay(150);
-	intake.move_velocity(0);
-			roller.move_velocity(0);
-			targetVelocity2 = 400;
-	targetVelocity = 400;
-			pros::delay(1000);
-	intake.move_velocity(600);
-			roller.move_velocity(200);
-	pros::delay(180);
+	pros::delay(170);
 	intake.move_velocity(0);
 			roller.move_velocity(0);
 			targetVelocity2 = 410;
 	targetVelocity = 410;
 			pros::delay(1000);
+	intake.move_velocity(600);
+			roller.move_velocity(200);
+	pros::delay(150);
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+			targetVelocity2 = 412;
+	targetVelocity = 412;
+			pros::delay(1000);
 
 	intake.move_velocity(600);
 			roller.move_velocity(200);
-	pros::delay(500);
+	pros::delay(800);
 	intake.move_velocity(0);
 			roller.move_velocity(0);
 			tkI = 0;
 			//turnTo(115);
-			pros::delay(2000);
+			pros::delay(1000);
+			getTo(100,100);
+			turnTo(-90);
+			nw.move_velocity(-600);
+			roller.move_velocity(100);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
+	pros::delay(220);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	//roller.move_velocity(80);
+	//pros::delay(150);
+	pros::delay(150);
+	roller.move_velocity(0);
 	targetVelocity2 = 0;
 	targetVelocity = 0;
 	
@@ -423,7 +478,7 @@ targetVelocity2 = 380;
 
 bool pu = false, pd = false,su=false,sd=0;
 bool pa = false, pb = false;
-bool cco = false;
+bool cco = false; 
 
 void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
@@ -434,7 +489,8 @@ void opcontrol() {
 		se = master.get_analog(ANALOG_LEFT_Y) - master.get_analog(ANALOG_RIGHT_X) + master.get_analog(ANALOG_LEFT_X);
 		sw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) - master.get_analog(ANALOG_LEFT_X);
 */
-
+			pros::lcd::print(7,"avel%lf",fa.get_actual_velocity());
+			pros::lcd::print(6,"bvel%lf",fb.get_actual_velocity());
 		double tilt = 45+in.get_heading() ; //for upper right auton, -90
 		if(master.get_analog(ANALOG_LEFT_X)==0){
 			if(master.get_analog(ANALOG_LEFT_Y)<0) tilt+=180;
@@ -532,7 +588,7 @@ void opcontrol() {
 		pros::lcd::print(2,"theta:%lf",(theta*180/M_PI));
 		pros::lcd::print(3,"ltw:%d rtw:%d stw:%d", ltw.get_value(), rtw.get_value(), stw.get_value());
 		pros::lcd::print(4,"imu%lf",in.get_heading());
-		pros::lcd::print(6,"tilt%lf",tilt);
+		//pros::lcd::print(6,"tilt%lf",tilt);
 		pros::delay(20);
 	}
 	expansion.pros::ADIDigitalOut::set_value(0);
