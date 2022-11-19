@@ -15,8 +15,8 @@ pros::Motor intake(10, pros::E_MOTOR_GEARSET_06, 0, pros::E_MOTOR_ENCODER_ROTATI
 pros::ADIEncoder ltw ('a', 'b', 0); 
 pros::ADIEncoder rtw ('e', 'f', 1);
 pros::ADIEncoder stw ('g', 'h', 0);
-pros::ADIDigitalOut air ('c');
-pros::ADIDigitalOut expansion('d');
+pros::ADIDigitalOut air ('d');
+pros::ADIDigitalOut expansion('c');
 //pros::Motor i2 (10, pros::E_MOTOR_GEARSET_18, 0, pros::E_MOTOR_ENCODER_ROTATIONS);
  
 //flywheel
@@ -31,7 +31,7 @@ pros::Optical optical_sensor(21);
 //flywheel pid
 const double threshold = 50;
 const double kV = 20.202;
-const double kP = 1;
+const double kP = 23; //kP 1 20
 const double kD = 150;
 double afpe = 0, bfpe = 0;
 double targetVelocity, targetVelocity2 =  250;
@@ -57,6 +57,8 @@ double distpreverror, disterrordiff, disttotalerror;
 //drive straight
 double prevFta;
 double ktp = 0.004;
+
+bool px = true;
 void destodom(double target_x, double target_y){ //maybe add target orientation?
 	double xcom, ycom, uld, lld, rta, fta, dist;
 	xcom = target_x-x, ycom = target_y-y;
@@ -188,7 +190,7 @@ void odometry(){
 }
 
 void initialize() {
-	red = true;
+	red = false;
 	expansion.pros::ADIDigitalOut::set_value(0);
 	air.pros::ADIDigitalOut::set_value(0);
 	pros::lcd::initialize();
@@ -481,18 +483,47 @@ void awp(){
 }
 
 void lrr(){
-
 	if(red){
 		int x = 0;
-		while(!(optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<20)){
+		
+		while(!(optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<40)&&!(optical_sensor.get_hue()>340&&optical_sensor.get_hue()<=360)){
 			roller.move_velocity(100);
-			pros::delay(20);
+			pros::delay(5);
+			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
+			return;
+		}
+		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
 		}
 		roller.move_velocity(0);
-		pros::delay(1000);
-		while((optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<20)){
+		
+		while(!(optical_sensor.get_hue()>=200&&optical_sensor.get_hue()<320)){
 			roller.move_velocity(50);
-			pros::delay(20);
+			pros::delay(5);
+			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
+			return;
+		}
+		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
+		}
+		roller.move_velocity(0);
+	}
+	else{
+		
+		while(!(optical_sensor.get_hue()>=200&&optical_sensor.get_hue()<320)){
+			roller.move_velocity(100);
+			pros::delay(5);
+			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
+			return;
+		}
+		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
+		}
+		roller.move_velocity(0);
+		while(!(optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<40)&&!(optical_sensor.get_hue()>340&&optical_sensor.get_hue()<=360)){
+			roller.move_velocity(50);
+			pros::delay(5);
+			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
+			return;
+		}
+		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
 		}
 		roller.move_velocity(0);
 	}
@@ -500,22 +531,22 @@ void lrr(){
 
 void rs(){
 	expansion.set_value(0);
-	targetVelocity2 = 380;
-	targetVelocity = 380;
+	targetVelocity2 = 370;
+	targetVelocity = 370;
 	roller.move_velocity(-200);
 	intake.move_velocity(-600);
 	ki = 2;
-	kd = 11000;
+	kd = 12000;
 	getTo(0,30);
 	kd = 9000;
 	intake.move_velocity(0);
 	roller.move_velocity(0);
-	turnTo(21); 
+	turnTo(19.8); 
 	//getTo(0,5);
 	ki = 1;
 	//pros::delay(700);
-	targetVelocity2 = 415;
-	targetVelocity = 415;
+	targetVelocity2 = 400;
+	targetVelocity = 400;
 	intake.move_velocity(600);
 
 			roller.move_velocity(200);
@@ -523,16 +554,17 @@ void rs(){
 	pros::delay(170);
 	intake.move_velocity(0);
 			roller.move_velocity(0);
-			targetVelocity2 = 425;
-	targetVelocity = 425;
+			targetVelocity2 = 410;
+	targetVelocity = 410;
 			pros::delay(1000);
 	intake.move_velocity(600);
 			roller.move_velocity(190);
 	pros::delay(170);
 	intake.move_velocity(0);
 			roller.move_velocity(0);
-			targetVelocity2 = 430;
-	targetVelocity = 430;
+
+			targetVelocity2 = 420;
+	targetVelocity = 420;
 			pros::delay(1000);
 
 	intake.move_velocity(600);
@@ -543,7 +575,6 @@ void rs(){
 			getTo(28,-3);
 			turnTo2(0);
 	nw.move_velocity(-600);
-			roller.move_velocity(100);
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
 	sw.move_velocity(-600);
@@ -552,15 +583,13 @@ void rs(){
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
+	lrr();
 	//roller.move_velocity(80);
 	//pros::delay(150);
-	pros::delay(230);
-	roller.move_velocity(0);
 }
 
 void autonomous() {
-	//rs();
-	lrr();
+	rs();
 }
 
 
@@ -576,10 +605,12 @@ void opcontrol() {
 		nw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) + master.get_analog(ANALOG_LEFT_X);
 		se = master.get_analog(ANALOG_LEFT_Y) - master.get_analog(ANALOG_RIGHT_X) + master.get_analog(ANALOG_LEFT_X);
 		sw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) - master.get_analog(ANALOG_LEFT_X);
-*/
+
 			pros::lcd::print(7,"avel%lf",fa.get_actual_velocity());
 			pros::lcd::print(6,"bvel%lf",fb.get_actual_velocity());
-		double tilt = 45+in.get_heading() ; //for upper right auton, -90
+*/
+			
+		double tilt = 45+in.get_heading() -90 ; //for upper right auton, -90
 		if(master.get_analog(ANALOG_LEFT_X)==0){
 			if(master.get_analog(ANALOG_LEFT_Y)<0) tilt+=180;
 		}
@@ -588,7 +619,7 @@ void opcontrol() {
 		}
 		else{
 			tilt-=(270-atan(master.get_analog(ANALOG_LEFT_Y)/master.get_analog(ANALOG_LEFT_X))*180/M_PI);
-		}
+		}	
 		double m = (master.get_analog(ANALOG_LEFT_Y))*(master.get_analog(ANALOG_LEFT_Y)) + (master.get_analog(ANALOG_LEFT_X))*(master.get_analog(ANALOG_LEFT_X));
 		m = sqrt(m);
 		m*=2;
@@ -601,7 +632,6 @@ void opcontrol() {
 			in.reset();
 			in.tare();
 		}
-		
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
 			lrr();
 		}
@@ -659,7 +689,7 @@ void opcontrol() {
 			pros::delay(180);
 			air.pros::ADIDigitalOut::set_value(0);
 		}*/
-		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT)==1&&pb==0){
+		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT)==1&&pb==0&&master.get_digital(pros::E_CONTROLLER_DIGITAL_UP)==1){
 			if(cco){
 				expansion.set_value(false);
 				cco = false;
@@ -670,6 +700,7 @@ void opcontrol() {
 			}
 			
 		}
+		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
 		pa = master.get_digital(pros::E_CONTROLLER_DIGITAL_A);
 		pb = master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT);
 		pros::lcd::print(1,"x:%lf y:%lf",x,y);
