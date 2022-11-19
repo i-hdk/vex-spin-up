@@ -2,6 +2,7 @@
 #include "api.h"
 #include <math.h>
 #include <string>
+#include <bits/stdc++.h>
 using namespace okapi;
 
 pros::Controller master(pros::E_CONTROLLER_MASTER);
@@ -29,12 +30,17 @@ pros::Optical optical_sensor(21);
   pros::c::optical_rgb_s_t rgb_value;
 
 //flywheel pid
-const double threshold = 50;
-const double kV = 20.202;
-const double kP = 23; //kP 1 20
+const double threshold = 500;
+const double threshold2 = 500;
+const double kV = 18.5185185;
+const double kP = 10; 
 const double kD = 150;
+const double kV2 = 17;
+const double kP2 = 30; 
+const double kD2 = 150;
 double afpe = 0, bfpe = 0;
 double targetVelocity, targetVelocity2 =  250;
+double test;
 
 //odometry variables
 double wd = 3.25; //wheel diameter
@@ -156,14 +162,14 @@ void odometry(){
 			else{
 				power = kV * targetVelocity + kP*error; //kv supposed to be slope
 			}
-			if(error2 > threshold){
+			if(error2 > threshold2){
 				power2 = 12000;
 			}
-			else if(error2 < -threshold){
+			else if(error2 < -threshold2){
 				power2 = 0;
 			}
 			else{
-				power2 = kV * targetVelocity2 + kP*error2; //kv supposed to be slope
+				power2 = kV2 * targetVelocity2 + kP2*error2+50; //kv supposed to be slope
 			}
 			afpe = error;
 			bfpe = error2;
@@ -176,6 +182,7 @@ void odometry(){
 		std::string ff = chassis->OdomChassisController::getState().str(1_in,"_in",1_deg,"_deg");
 		ff = ff.substr(10);
 		pros::lcd::print(0,"%s",ff.c_str());
+		pros::lcd::print(1,"%lf",test);
 		std::string aa = "";
 		double vall = stod(ff.substr(ff.find("x=")+2,ff.find("_in")));
 		ox = vall;
@@ -190,7 +197,7 @@ void odometry(){
 }
 
 void initialize() {
-	red = false;
+	red = true;
 	expansion.pros::ADIDigitalOut::set_value(0);
 	air.pros::ADIDigitalOut::set_value(0);
 	pros::lcd::initialize();
@@ -588,6 +595,10 @@ void rs(){
 	//pros::delay(150);
 }
 
+void skills(){
+	
+}
+
 void autonomous() {
 	rs();
 }
@@ -599,7 +610,9 @@ bool cco = false;
 
 void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
+
 	while (true){
+		
 	/*
 		ne = master.get_analog(ANALOG_LEFT_Y) - master.get_analog(ANALOG_RIGHT_X) - master.get_analog(ANALOG_LEFT_X);
 		nw = master.get_analog(ANALOG_LEFT_Y) + master.get_analog(ANALOG_RIGHT_X) + master.get_analog(ANALOG_LEFT_X);
