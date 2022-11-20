@@ -494,7 +494,7 @@ void lrr(){
 		int x = 0;
 		
 		while(!(optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<40)&&!(optical_sensor.get_hue()>340&&optical_sensor.get_hue()<=360)){
-			roller.move_velocity(100);
+			roller.move_velocity(50);
 			pros::delay(5);
 			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
 			return;
@@ -504,7 +504,7 @@ void lrr(){
 		roller.move_velocity(0);
 		
 		while(!(optical_sensor.get_hue()>=200&&optical_sensor.get_hue()<320)){
-			roller.move_velocity(50);
+			roller.move_velocity(30);
 			pros::delay(5);
 			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
 			return;
@@ -516,7 +516,7 @@ void lrr(){
 	else{
 		
 		while(!(optical_sensor.get_hue()>=200&&optical_sensor.get_hue()<320)){
-			roller.move_velocity(100);
+			roller.move_velocity(50);
 			pros::delay(5);
 			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
 			return;
@@ -525,7 +525,7 @@ void lrr(){
 		}
 		roller.move_velocity(0);
 		while(!(optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<40)&&!(optical_sensor.get_hue()>340&&optical_sensor.get_hue()<=360)){
-			roller.move_velocity(50);
+			roller.move_velocity(30);
 			pros::delay(5);
 			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
 			return;
@@ -595,12 +595,89 @@ void rs(){
 	//pros::delay(150);
 }
 
-void skills(){
-	
+void ls(){
+	nw.move_velocity(-600);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
+	pros::delay(180);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	lrr();
+	nw.move_velocity(600);
+	se.move_velocity(600);
+	ne.move_velocity(600);
+	sw.move_velocity(600);
+	pros::delay(70);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
 }
 
+void skills(){
+	targetVelocity2 = 0;
+	targetVelocity = 0;
+	nw.move_velocity(-600);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
+	pros::delay(180);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	lrr();
+	nw.move_velocity(600);
+	se.move_velocity(600);
+	ne.move_velocity(600);
+	sw.move_velocity(600);
+	pros::delay(170);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	ki = 2;
+	turnTo(-20);
+	roller.move_velocity(-200);
+	intake.move_velocity(-600);
+	getTo(-18,22);
+	roller.move_velocity(0);
+	intake.move_velocity(0);
+	turnTo(70);
+	nw.move_velocity(-600);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
+	pros::delay(700);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	lrr();
+	nw.move_velocity(600);
+	se.move_velocity(600);
+	ne.move_velocity(600);
+	sw.move_velocity(600);
+	pros::delay(1000);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	turnTo2(40);
+	pros::delay(4000);
+	expansion.set_value(true);
+	pros::delay(2000);
+	expansion.set_value(false);
+	pros::delay(1000);
+	expansion.set_value(true);
+}
+
+
 void autonomous() {
-	rs();
+	skills();
 }
 
 
@@ -623,7 +700,7 @@ void opcontrol() {
 			pros::lcd::print(6,"bvel%lf",fb.get_actual_velocity());
 */
 			
-		double tilt = 45+in.get_heading() -90 ; //for upper right auton, -90
+		double tilt = 45+in.get_heading()  ; //for upper right auton, -90
 		if(master.get_analog(ANALOG_LEFT_X)==0){
 			if(master.get_analog(ANALOG_LEFT_Y)<0) tilt+=180;
 		}
@@ -691,10 +768,10 @@ void opcontrol() {
 			targetVelocity = 500;
 		}
 		else{
-			targetVelocity = 370;
+			targetVelocity = 380;
 			//fa.move_velocity(0);
 			//fb.move_velocity(0);
-			targetVelocity2 = 370;
+			targetVelocity2 = 380;
 		}
 		/*
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_A)==1&&pa==0){
