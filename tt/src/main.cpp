@@ -53,7 +53,7 @@ double h2; //same but for strafe
 double r,r2; //cirle radius
 double ox,oy,otheta; //version 2 of odon
 
-double kp = 1800, ki = 0.5, kd = 10000; //1.9 for short 8000
+double kp = 1900, ki = 0.5, kd = 10000; //1.9 for short 8000
 //0.5 for 72 (i think?)
 double ultotalerror,lltotalerror;
 double ulpreverror = 0,llpreverror=0,llerrordiff = 0,ulerrordiff;
@@ -62,7 +62,7 @@ double distpreverror, disterrordiff, disttotalerror;
 
 //drive straight
 double prevFta;
-double ktp = 0.004;
+double ktp = 0.1;
 
 bool px = true;
 void destodom(double target_x, double target_y){ //maybe add target orientation?
@@ -238,17 +238,21 @@ void tr(double vel){
 	sw = vel;
 }
 
-double tkP = 10000; double tkI = 1000, terror=0;
+double tkP = 8000; double tkI = 400, terror=0; double tkD = 800000;
+double ppe = 0;
 void turnTo(double aa){
 	terror = 0;
+	ppe = 0;
 	while(theta<aa*M_PI/180-0.03||theta>aa*M_PI/180+0.03){
 		double te = theta - aa*M_PI/180;
+		double ec = te - ppe;
+		ppe = te;
 		terror = terror +te;
 		pros::lcd::print(5,"%lf",te);
-		nw.move_voltage((tkP*te+tkI*terror)*-1);
-		ne.move_voltage(tkP*te+tkI*terror);
-		sw.move_voltage((tkP*te+tkI*terror)*-1);
-		se.move_voltage(tkP*te+tkI*terror);
+		nw.move_voltage((tkP*te+tkI*terror+ec*tkD)*-1);
+		ne.move_voltage(tkP*te+tkI*terror+ec*tkD);
+		sw.move_voltage((tkP*te+tkI*terror+ec*tkD)*-1);
+		se.move_voltage(tkP*te+tkI*terror+ec*tkD);
 		pros::delay(10);
 	}
 	nw.move_voltage(0);
@@ -543,70 +547,37 @@ void rs(){
 	roller.move_velocity(-200);
 	intake.move_velocity(-600);
 	ki = 2;
-	kd = 12000;
-	getTo(0,30);
+	kd = 10000;
+	getTo(0,27);
 	kd = 9000;
-	intake.move_velocity(0);
+	turnTo(-90); 
+	intake.move_velocity(0) ;
 	roller.move_velocity(0);
-	turnTo(19.8); 
 	//getTo(0,5);
 	ki = 1;
 	//pros::delay(700);
-	targetVelocity2 = 380;
-	targetVelocity = 380;
+	targetVelocity2 = 300;
+	targetVelocity = 300;
 	intake.move_velocity(600);
 
 			roller.move_velocity(200);
-			
-	pros::delay(170);
+		
+	pros::delay(2000);
 	intake.move_velocity(0);
 			roller.move_velocity(0);
-			targetVelocity2 = 400;
-	targetVelocity = 400;
-			pros::delay(1000);
-	intake.move_velocity(600);
-			roller.move_velocity(190);
-	pros::delay(140);
-	intake.move_velocity(0);
-			roller.move_velocity(0);
-
-			targetVelocity2 = 420;
-	targetVelocity = 420;
-			pros::delay(1000);
-
-	intake.move_velocity(600);
-			roller.move_velocity(180);
-	pros::delay(800);
-	intake.move_velocity(0);
-			roller.move_velocity(0);
-			getTo(28,-3);
+			getTo(30,-3);
 			turnTo2(0);
 	nw.move_velocity(-600);
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
 	sw.move_velocity(-600);
-	pros::delay(500);
+	pros::delay(550);
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
 	lrr();
-	nw.move_velocity(600);
-	se.move_velocity(600);
-	ne.move_velocity(600);
-	sw.move_velocity(600);
-	pros::delay(170);
-	nw.move_velocity(0);
-	se.move_velocity(0);
-	ne.move_velocity(0);
-	sw.move_velocity(0);
-	ki = 0.7;
-	kd = 15000;
-		roller.move_velocity(-200);
-	intake.move_velocity(-600);
-	getTo(-25,33);
-	turnTo(-110);
-	getTo(-19,5);
+	
 	
 }
 
