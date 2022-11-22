@@ -557,8 +557,8 @@ void rs(){
 	//getTo(0,5);
 	ki = 1;
 	//pros::delay(700);
-	targetVelocity2 = 300;
-	targetVelocity = 300;
+	targetVelocity2 = 400;
+	targetVelocity = 400;
 	intake.move_velocity(600);
 
 			roller.move_velocity(200);
@@ -566,7 +566,25 @@ void rs(){
 	pros::delay(2000);
 	intake.move_velocity(0);
 			roller.move_velocity(0);
-			getTo(30,-3);
+			targetVelocity2 = 410;
+	targetVelocity = 410;
+			pros::delay(1000);
+	intake.move_velocity(600);
+			roller.move_velocity(190);
+	pros::delay(170);
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+
+			targetVelocity2 = 420;
+	targetVelocity = 420;
+			pros::delay(1000);
+
+	intake.move_velocity(600);
+			roller.move_velocity(200);
+	pros::delay(800);
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+			getTo(28,-3);
 			turnTo2(0);
 	nw.move_velocity(-600);
 	se.move_velocity(-600);
@@ -578,8 +596,8 @@ void rs(){
 	ne.move_velocity(0);
 	sw.move_velocity(0);
 	lrr();
-	
-	
+	//roller.move_velocity(80);
+	//pros::delay(150);
 }
 
 void ls(){
