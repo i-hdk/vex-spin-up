@@ -556,8 +556,8 @@ void rs(){
 	//getTo(0,5);
 	ki = 1;
 	//pros::delay(700);
-	targetVelocity2 = 300;
-	targetVelocity = 300;
+	targetVelocity2 = 400;
+	targetVelocity = 400;
 	intake.move_velocity(600);
 
 			roller.move_velocity(200);
@@ -565,7 +565,25 @@ void rs(){
 	pros::delay(2000);
 	intake.move_velocity(0);
 			roller.move_velocity(0);
-			getTo(30,-3);
+			targetVelocity2 = 410;
+	targetVelocity = 410;
+			pros::delay(1000);
+	intake.move_velocity(600);
+			roller.move_velocity(190);
+	pros::delay(170);
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+
+			targetVelocity2 = 420;
+	targetVelocity = 420;
+			pros::delay(1000);
+
+	intake.move_velocity(600);
+			roller.move_velocity(200);
+	pros::delay(800);
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+			getTo(28,-3);
 			turnTo2(0);
 	nw.move_velocity(-600);
 	se.move_velocity(-600);
@@ -577,8 +595,8 @@ void rs(){
 	ne.move_velocity(0);
 	sw.move_velocity(0);
 	lrr();
-	
-	
+	//roller.move_velocity(80);
+	//pros::delay(150);
 }
 
 void ls(){
@@ -606,7 +624,6 @@ void ls(){
 void skills(){
 	targetVelocity2 = 0;
 	targetVelocity = 0;
-	/*
 	nw.move_velocity(-600);
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
@@ -653,7 +670,7 @@ void skills(){
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
-	turnTo2(40);*/
+	turnTo2(40);
 	pros::delay(4000);
 	expansion.set_value(true);
 	pros::delay(2000);
@@ -664,7 +681,7 @@ void skills(){
 
 
 void autonomous() {
-	rs();
+	skills();
 }
 
 
@@ -687,7 +704,7 @@ void opcontrol() {
 			pros::lcd::print(6,"bvel%lf",fb.get_actual_velocity());
 */
 			
-		double tilt = 45+in.get_heading()-90  ; //for upper right auton, -90
+		double tilt = 45+in.get_heading()  ; //for upper right auton, -90
 		if(master.get_analog(ANALOG_LEFT_X)==0){
 			if(master.get_analog(ANALOG_LEFT_Y)<0) tilt+=180;
 		}
