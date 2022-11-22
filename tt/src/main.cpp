@@ -238,7 +238,7 @@ void tr(double vel){
 	sw = vel;
 }
 
-double tkP = 8000; double tkI = 400, terror=0; double tkD = 800000;
+double tkP = 8000; double tkI = 400, terror=0; double tkD = 40000;
 double ppe = 0;
 void turnTo(double aa){
 	terror = 0;
@@ -548,7 +548,7 @@ void rs(){
 	intake.move_velocity(-600);
 	ki = 2;
 	kd = 10000;
-	getTo(0,27);
+	getTo(0,25); //27
 	kd = 9000;
 	turnTo(-90); 
 	intake.move_velocity(0) ;
@@ -556,16 +556,17 @@ void rs(){
 	//getTo(0,5);
 	ki = 1;
 	//pros::delay(700);
-	targetVelocity2 = 300;
-	targetVelocity = 300;
+	targetVelocity2 = 280;
+	targetVelocity = 280;
 	intake.move_velocity(600);
 
 			roller.move_velocity(200);
 		
-	pros::delay(2000);
-	intake.move_velocity(0);
-			roller.move_velocity(0);
+	pros::delay(1300);
+	
 			getTo(30,-3);
+			intake.move_velocity(0);
+			roller.move_velocity(0);
 			turnTo2(0);
 	nw.move_velocity(-600);
 	se.move_velocity(-600);
@@ -577,8 +578,20 @@ void rs(){
 	ne.move_velocity(0);
 	sw.move_velocity(0);
 	lrr();
-	
-	
+	ki = 6;
+intake.move_velocity(-600);
+	getTo(15,8);
+	roller.move_velocity(-200);
+	intake.move_velocity(-600);
+	turnTo(50);
+	ki = 15;
+	getTo(16,10);
+	turnTo(-100);
+	targetVelocity2 = 500;
+	targetVelocity = 500;
+	intake.move_velocity(600);
+
+			roller.move_velocity(200);
 }
 
 void ls(){
@@ -687,7 +700,7 @@ void opcontrol() {
 			pros::lcd::print(6,"bvel%lf",fb.get_actual_velocity());
 */
 			
-		double tilt = 45+in.get_heading()-90  ; //for upper right auton, -90
+		double tilt = 45+in.get_heading() -90  ; //for upper right auton, -90
 		if(master.get_analog(ANALOG_LEFT_X)==0){
 			if(master.get_analog(ANALOG_LEFT_Y)<0) tilt+=180;
 		}
