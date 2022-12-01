@@ -33,13 +33,13 @@ pros::Optical optical_sensor(21);
 const double threshold = 500;
 const double threshold2 = 500;
 const double kV = 18.5185185;
-const double kP = 5; //10 7 20
-const double kD = 150;
+double kP = 100; //10 7 20
+double kD = 2;
 const double kV2 = 17;
-const double kP2 = 30; 
-const double kD2 = 150;
+double kP2 = 90; 
+double kD2 = 0;
 double afpe = 0, bfpe = 0;
-double targetVelocity, targetVelocity2 =  250;
+double targetVelocity, targetVelocity2 = 380;
 double test;
 double av,bv;
 
@@ -89,6 +89,16 @@ void destodom(double target_x, double target_y){ //maybe add target orientation?
 	sw.move_voltage(sin(rta)*mag);
 	prevFta = fta;
 }
+
+//filter variables
+double prever = 0;
+double alpha = 0.013; //0.002
+double filter(double er){
+	double output = alpha*er + (1.0-alpha) * prever;
+	prever = output;
+	return output;
+}
+
 std::shared_ptr<OdomChassisController> chassis;
 void odometry(){
 	in.reset();
@@ -169,8 +179,8 @@ bv = (sumb/velQueueb.size());
 		if(targetVelocity>-300){
 			//double error = targetVelocity - ((fa.get_actual_velocity()+fb.get_actual_velocity())/2);
 			//250 and 600 for shoot from mid
-			double error = targetVelocity - fa.get_actual_velocity();
-			double error2 = targetVelocity2 - fb.get_actual_velocity();
+			double error = filter(targetVelocity - fa.get_actual_velocity());
+			double error2 = filter(targetVelocity2 - fb.get_actual_velocity());
 			double power,power2;
 			double ad = error - afpe;
 			double bd = error2 - bfpe;
@@ -181,7 +191,7 @@ bv = (sumb/velQueueb.size());
 				power = 0;
 			}
 			else{
-				power = kV * targetVelocity + kP*error; //kv supposed to be slope
+				power = kV * targetVelocity + kP*error + ad*kD; //kv supposed to be slope
 			}
 			if(error2 > threshold2){
 				power2 = 12000;
@@ -190,20 +200,21 @@ bv = (sumb/velQueueb.size());
 				power2 = 0;
 			}
 			else{
-				power2 = kV2 * targetVelocity2 + kP2*error2+50; //kv supposed to be slope
+				power2 = kV2 * targetVelocity2 + kP2*error2 + bd*kD2 +  100; //kv supposed to be slope +50?
 			}
 			afpe = error;
 			bfpe = error2;
 			fb.move_voltage(power2);
 			fa.move_voltage(power);
-			pros::lcd::print(7,"avel%lf",fa.get_actual_velocity());
-			pros::lcd::print(6,"bvel%lf",fb.get_actual_velocity());
+			pros::lcd::print(7,"avel%lf",av);
+			pros::lcd::print(6,"bvel%lf",bv);
 		}
 		
 		std::string ff = chassis->OdomChassisController::getState().str(1_in,"_in",1_deg,"_deg");
 		ff = ff.substr(10);
 		pros::lcd::print(0,"%s",ff.c_str());
 		pros::lcd::print(1,"%lf",test);
+		pros::lcd::print(4,"co%lf",optical_sensor.get_hue());
 		std::string aa = "";
 		double vall = stod(ff.substr(ff.find("x=")+2,ff.find("_in")));
 		ox = vall;
@@ -221,6 +232,7 @@ void initialize() {
 	red = true;
 	expansion.pros::ADIDigitalOut::set_value(0);
 	air.pros::ADIDigitalOut::set_value(0);
+	optical_sensor.set_led_pwm(10);
 	pros::lcd::initialize();
 	ne.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
 	nw.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
@@ -421,93 +433,14 @@ void URauton2(){
 	sw.move_velocity(0);
 }
 
-void awp(){
-	expansion.set_value(0);
-	targetVelocity2 = 380;
-	targetVelocity = 380;
-
-	nw.move_velocity(-600);
-	se.move_velocity(-600);
-	ne.move_velocity(-600);
-	sw.move_velocity(-600);
-	pros::delay(180);
-	nw.move_velocity(0);
-	se.move_velocity(0);
-	ne.move_velocity(0);
-	sw.move_velocity(0);
-	roller.move_velocity(-60);
-	pros::delay(770);
-	roller.move_velocity(0);
-	nw.move_velocity(600);
-	se.move_velocity(600);
-	ne.move_velocity(600);
-	sw.move_velocity(600);
-	pros::delay(170);
-	nw.move_velocity(0);
-	se.move_velocity(0);
-	ne.move_velocity(0);
-	sw.move_velocity(0);
-	ki = 16;
-	turnTo(-20);
+void rwl(){
 	roller.move_velocity(-200);
-	intake.move_velocity(-600);
-	getTo(-1,11);
-	//getTo(0,5);
-	ki = 0.7;
-	pros::delay(700);
-	intake.move_velocity(0);
+	pros::delay(1000);
 	roller.move_velocity(0);
-	getTo(39,50);
-	tkP = 45000;
-	tkI = 200; //120
-	turnTo2(-39); //38.5
-	tkP=12000;
-	targetVelocity2 = 320;
-	targetVelocity = 320;
-	intake.move_velocity(600);
-
-			roller.move_velocity(200);
-	pros::delay(170);
-	intake.move_velocity(0);
-			roller.move_velocity(0);
-			targetVelocity2 = 410;
-	targetVelocity = 410;
-			pros::delay(1000);
-	intake.move_velocity(600);
-			roller.move_velocity(200);
-	pros::delay(150);
-	intake.move_velocity(0);
-			roller.move_velocity(0);
-			targetVelocity2 = 412;
-	targetVelocity = 412;
-			pros::delay(1000);
-
-	intake.move_velocity(600);
-			roller.move_velocity(200);
-	pros::delay(800);
-	intake.move_velocity(0);
-			roller.move_velocity(0);
-			tkI = 0;
-			//turnTo(115);
-			pros::delay(1000);
-			getTo(100,100);
-			turnTo(-90);
-			nw.move_velocity(-600);
-			roller.move_velocity(100);
-	se.move_velocity(-600);
-	ne.move_velocity(-600);
-	sw.move_velocity(-600);
-	pros::delay(220);
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
-	//roller.move_velocity(80);
-	//pros::delay(150);
-	pros::delay(150);
-	roller.move_velocity(0);
-	targetVelocity2 = 0;
-	targetVelocity = 0;
 }
 
 void lrr(){
@@ -529,6 +462,8 @@ void lrr(){
 			pros::delay(5);
 			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
 			return;
+			x++;
+			if(x>500) return;
 		}
 		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
 		}
@@ -557,10 +492,155 @@ void lrr(){
 	}
 }
 
+void slrr(){
+	if(red){
+		int x = 0;
+		
+		
+		
+		while(!(optical_sensor.get_hue()>=200&&optical_sensor.get_hue()<300)){
+			roller.move_velocity(-80);
+			pros::delay(5);
+			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
+			return;
+		}
+		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
+		}
+		roller.move_velocity(0);
+		pros::delay(1000);
+		while(!(optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<40)&&!(optical_sensor.get_hue()>320&&optical_sensor.get_hue()<=360)){
+			roller.move_velocity(-50);
+			pros::delay(5);
+			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
+			return;
+		}
+		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
+		}
+		roller.move_velocity(0);
+	}
+	else{
+		while(!(optical_sensor.get_hue()>=0&&optical_sensor.get_hue()<40)&&!(optical_sensor.get_hue()>340&&optical_sensor.get_hue()<=360)){
+			roller.move_velocity(-50);
+			pros::delay(5);
+			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
+			return;
+		}
+		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
+		}
+		roller.move_velocity(0);
+		while(!(optical_sensor.get_hue()>=200&&optical_sensor.get_hue()<320)){
+			roller.move_velocity(-30);
+			pros::delay(5);
+			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
+			return;
+		}
+		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
+		}
+		roller.move_velocity(0);
+		
+	}
+}
+
+void awp(){
+	expansion.set_value(0);
+	targetVelocity2 = -100;
+	targetVelocity = -100;
+
+	nw.move_velocity(-600);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
+	pros::delay(180);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	lrr();
+	nw.move_velocity(600);
+	se.move_velocity(600);
+	ne.move_velocity(600);
+	sw.move_velocity(600);
+	pros::delay(170);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	targetVelocity2 = 334;
+	targetVelocity = 334;
+	ki = 12; //16
+	turnTo(-20);
+	roller.move_velocity(-200);
+	intake.move_velocity(-600);
+	getTo(-1,11);
+	//getTo(0,5);
+	ki = 0.7; //0.7
+	pros::delay(700);
+	intake.move_velocity(-50);
+	//roller.move_velocity(-100);
+	getTo(41,52); //39 50
+	intake.move_velocity(0);
+	roller.move_velocity(0);
+	tkP = 45000;
+	tkI = 200; //120
+	turnTo2(-39); //38.5
+	tkP=12000;
+	
+	targetVelocity2 = 334; //340 572
+	targetVelocity = 334;
+	intake.move_velocity(600);
+
+			roller.move_velocity(200);
+			
+	pros::delay(170);
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+			targetVelocity2 = 355;
+	targetVelocity = 355;
+			pros::delay(1000);
+	intake.move_velocity(-600);
+			roller.move_velocity(190);
+	pros::delay(150); //110
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+
+			targetVelocity2 = 362;
+	targetVelocity = 362;
+			pros::delay(1000);
+
+	intake.move_velocity(600);
+			roller.move_velocity(180);
+	pros::delay(1000); //2000
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+			tkI = 0;
+			ki = 0.5;
+			pros::delay(1000);
+			getTo(100,103);
+			turnTo(-90);
+		nw.move_velocity(-600);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
+	pros::delay(600);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	lrr();
+	//roller.move_velocity(80);
+	//pros::delay(150);
+	pros::delay(150);
+	roller.move_velocity(0);
+	targetVelocity2 = 0;
+	targetVelocity = 0;
+}
+
 void rs(){
 	expansion.set_value(0);
-	targetVelocity2 = 568;
-	targetVelocity = 165;
+	//targetVelocity2 = 540;
+	//targetVelocity = 137;
+	targetVelocity2 = 334;
+	targetVelocity = 334;
 	roller.move_velocity(-200);
 	intake.move_velocity(-600);
 	ki = 2;
@@ -570,12 +650,12 @@ void rs(){
 	pros::delay(1000);
 	intake.move_velocity(0);
 	roller.move_velocity(0);
-	turnTo(21.2); 
-	//getTo(0,5);
+	turnTo(20); //20.5 22
+	
 	ki = 1;
 	//pros::delay(700);
-	targetVelocity2 = 562; //340 572
-	targetVelocity = 159;
+	//targetVelocity2 = 340; //545 142
+	//targetVelocity = 340;
 	intake.move_velocity(600);
 
 			roller.move_velocity(200);
@@ -583,17 +663,17 @@ void rs(){
 	pros::delay(170);
 	intake.move_velocity(0);
 			roller.move_velocity(0);
-			targetVelocity2 = 563;
-	targetVelocity = 161;
+			targetVelocity2 = 355;
+	targetVelocity = 355;
 			pros::delay(1000);
 	intake.move_velocity(-600);
 			roller.move_velocity(190);
-	pros::delay(170);
+	pros::delay(110); //150
 	intake.move_velocity(0);
 			roller.move_velocity(0);
 
-			targetVelocity2 = 575;
-	targetVelocity = 175;
+			targetVelocity2 = 362;
+	targetVelocity = 362;
 			pros::delay(1000);
 
 	intake.move_velocity(600);
@@ -655,18 +735,20 @@ void ls(){
 }
 
 void skills(){
-	targetVelocity2 = 0;
-	targetVelocity = 0;
+	targetVelocity2 = -400;
+	targetVelocity = -400;
+	fa.move_velocity(-600);
+	fb.move_velocity(-600);
 	nw.move_velocity(-600);
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
 	sw.move_velocity(-600);
-	pros::delay(220);
+	pros::delay(300); //220
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
-	lrr();
+	lrr(); //IMP!! NEED TO FIX
 	nw.move_velocity(600);
 	se.move_velocity(600);
 	ne.move_velocity(600);
@@ -676,58 +758,85 @@ void skills(){
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
-	ki = 4;
+	ki = 4; 
 	turnTo(-20);
 	roller.move_velocity(-200);
 	intake.move_velocity(-600);
 	getTo(-5,20);
-	roller.move_velocity(0);
-	intake.move_velocity(0);
+	//roller.move_velocity(0);
+	//intake.move_velocity(0);
 	tkP = 8000;
 	tkI = 10;
 	turnTo(90);
+	ki=5; //7
+	roller.move_velocity(0);
+	intake.move_velocity(0);
+	getTo(-25,23);
+	turnTo2(90);
+	roller.move_velocity(0);
+	intake.move_velocity(0);
 	nw.move_velocity(-600);
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
 	sw.move_velocity(-600);
-	pros::delay(700);
+	pros::delay(300);
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
 	lrr();
+	nw.move_velocity(600);
+	se.move_velocity(600);
+	ne.move_velocity(600);
+	sw.move_velocity(600);
+	pros::delay(300);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	ki = 1;
+	targetVelocity2 = 370;
+	targetVelocity = 370;
+	getTo(-15,74);
+	tkI = 15;
+	turnTo(-2);
+	pros::delay(500);
+	roller.move_velocity(200);
+	intake.move_velocity(-600);
+	pros::delay(3000);
+	intake.move_velocity(600);
+	/*
+	ki = 0.5;
+	getTo(85,70);
+	pros::delay(500);
+	ki = 5;
+	getTo(100,100);
+	turnTo2(-90);
+	*/
+	getTo(-12,8);
+	turnTo(42);
 	
+	expansion.set_value(true);
+	pros::delay(1000);
+	expansion.set_value(false);
+	pros::delay(500);
+	expansion.set_value(true);
+
+	pros::delay(1000);
+	nw.move_velocity(600);
+	se.move_velocity(600);
+	ne.move_velocity(600);
+	sw.move_velocity(600);
+	pros::delay(300);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
 }
 
 
 void autonomous() {
-	
-
-	targetVelocity2 = 562; //340 572
-	targetVelocity = 159;
-	pros::delay(2000);
-	intake.move_velocity(600);
-
-			roller.move_velocity(200);
-			
-	pros::delay(170);
-	intake.move_velocity(0);
-			roller.move_velocity(0);
-	//		targetVelocity2 = 563;
-	//targetVelocity = 161;
-			pros::delay(1000);
-	intake.move_velocity(-600);
-			roller.move_velocity(190);
-
-
-	//		targetVelocity2 = 575;
-	//targetVelocity = 175;
-			pros::delay(1000);
-
-
-	pros::delay(2000);
-	intake.move_velocity(0);
-			roller.move_velocity(0);
+	skills();
 }
 
 
@@ -750,7 +859,7 @@ void opcontrol() {
 			pros::lcd::print(6,"bvel%lf",fb.get_actual_velocity());
 */
 			
-		double tilt = 45+in.get_heading()-90  ; //for upper right auton, -90
+		double tilt = 45+in.get_heading()  ; //for upper right auton, -90
 		if(master.get_analog(ANALOG_LEFT_X)==0){
 			if(master.get_analog(ANALOG_LEFT_Y)<0) tilt+=180;
 		}
@@ -773,7 +882,8 @@ void opcontrol() {
 			in.tare();
 		}
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
-			lrr();
+			//lrr();
+			slrr();
 		}
 		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_B)){
 			roller.move_velocity(-200);
@@ -818,10 +928,10 @@ void opcontrol() {
 			targetVelocity = 500;
 		}
 		else{
-			targetVelocity = 380;
+			targetVelocity = 375; //used to be 380
 			//fa.move_velocity(0);
 			//fb.move_velocity(0);
-			targetVelocity2 = 380;
+			targetVelocity2 = 375;
 		}
 		/*
 		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_A)==1&&pa==0){
@@ -840,6 +950,13 @@ void opcontrol() {
 			}
 			
 		}
+		/*
+		if(master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT)){
+			alpha+=0.002;
+		}
+		else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_RIGHT)){
+			alpha-=0.002;
+		}*/
 		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
 		pa = master.get_digital(pros::E_CONTROLLER_DIGITAL_A);
 		pb = master.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT);
@@ -847,6 +964,7 @@ void opcontrol() {
 		pros::lcd::print(2,"theta:%lf",(theta*180/M_PI));
 		//pros::lcd::print(3,"ltw:%d rtw:%d stw:%d", ltw.get_value(), rtw.get_value(), stw.get_value());
 		pros::lcd::print(4,"co%lf",optical_sensor.get_hue());
+		pros::lcd::print(3,"alpha%lf",alpha);
 		//pros::lcd::print(6,"tilt%lf",tilt);
 		pros::delay(20);
 	}

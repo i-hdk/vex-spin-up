@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "odomTest",
+    "project_name": "skills",
     "target": "v5",
     "templates": {
       "kernel": {
@@ -309,7 +309,9 @@
       }
     },
     "upload_options": {
-      "icon": "pros"
+      "icon": "pros",
+      "slot": 2,
+      "description": "face front"
     }
   }
 }
