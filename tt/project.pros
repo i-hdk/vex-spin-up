@@ -310,8 +310,8 @@
     },
     "upload_options": {
       "icon": "pros",
-      "slot": 2,
-      "description": "face front"
+      "slot": 3,
+      "description": "e"
     }
   }
 }
