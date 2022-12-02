@@ -446,6 +446,7 @@ void rwl(){
 }
 
 void lrr(){
+	double startm = pros::millis();
 	if(red){
 		int x = 0;
 		
@@ -875,7 +876,7 @@ fb.move_velocity(-600);
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
-	ki = 5; //4 
+	ki = 5.5; //4 
 	turnTo(-20);
 	roller.move_velocity(-200);
 	intake.move_velocity(-600);
@@ -888,7 +889,7 @@ fb.move_velocity(-600);
 	ki=6; //7
 	roller.move_velocity(0);
 	intake.move_velocity(0);
-	getTo(-25,23);
+	getTo(-24,23); //-25
 	turnTo2(90);
 	roller.move_velocity(0);
 	intake.move_velocity(0);
@@ -896,7 +897,7 @@ fb.move_velocity(-600);
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
 	sw.move_velocity(-600);
-	pros::delay(300); //300
+	pros::delay(450); //300 350
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
@@ -921,43 +922,106 @@ fb.move_voltage(0);
 pros::delay(1000);
 roller.move_velocity(0);
 
-	targetVelocity2 = 370;
-	targetVelocity = 370;
-	getTo(-15,74);
-	tkI = 15;
-	turnTo(-5); //-4
-
-
-
-
-
-
-
-
-
-
-	
+	targetVelocity2 = 330;
+	targetVelocity = 330;
+	getTo(-20,74); //76
+	tkI = 18; //15
+	turnTo(1); 
 	pros::delay(500);
 	roller.move_velocity(200);
 	intake.move_velocity(-600);
-	pros::delay(3000);
+	pros::delay(2000);
 	intake.move_velocity(600);
-	/*
-	ki = 0.5;
-	getTo(85,70);
-	pros::delay(500);
+tkI = 20;
+
+targetVelocity2 = 335;
+	targetVelocity = 335;
+turnTo(45);
+roller.move_velocity(-200);
+	intake.move_velocity(-600);
 	ki = 5;
-	getTo(100,100);
-	turnTo2(-90);
-	*/
-	getTo(-12,8);
-	targetVelocity2 = -400;
-	targetVelocity = -400;
-	fa.move_velocity(0);
-	fb.move_velocity(0);
-	roller.move_velocity(0);
+getTo(15,75);
+pros::delay(2000);
+roller.move_velocity(0);
 	intake.move_velocity(0);
-	turnTo2(42);
+pros::delay(200);
+
+turnTo(-40);
+roller.move_velocity(200);
+	intake.move_velocity(-600);
+	pros::delay(2000);
+	intake.move_velocity(600);
+
+ki = 27;
+getTo(23,74); //23
+	pros::delay(500);
+	roller.move_velocity(-200);
+	intake.move_velocity(-600);
+	ki = 1;
+	getTo(23.5,115);
+
+	tkI = 25;
+	turnTo(-93);
+pros::delay(500);
+	roller.move_velocity(200);
+	intake.move_velocity(-600);
+	pros::delay(2000);
+	intake.move_velocity(600);
+
+ki = 20;
+getTo(27,122);
+tkI = 5;
+turnTo(130); //130
+roller.move_velocity(-200);
+	intake.move_velocity(-600);
+	ki = 3;
+getTo(40,105);
+
+pros::delay(1000);
+
+nw.move_velocity(200);
+	se.move_velocity(200);
+	ne.move_velocity(200);
+	sw.move_velocity(200);
+	pros::delay(900);
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+targetVelocity2 = 330;
+	targetVelocity = 330;
+getTo(21,119);
+
+	tkI = 5;
+	turnTo(-87);
+pros::delay(500);
+	roller.move_velocity(200);
+	intake.move_velocity(-600);
+	pros::delay(2000);
+	intake.move_velocity(600);
+
+
+//getTo(56,90);
+//pros::delay(2000);
+ki = 1;
+getTo(77,123);
+turnTo(-180);
+nw.move_velocity(-600);
+	se.move_velocity(-600);
+	ne.move_velocity(-600);
+	sw.move_velocity(-600);
+	pros::delay(600); //300 350
+	nw.move_velocity(0);
+	se.move_velocity(0);
+	ne.move_velocity(0);
+	sw.move_velocity(0);
+	lrr();
+
+	ki = 15;
+	getTo(88,120);
+	turnTo(-135);
+
+	//pros::delay(4000);
 	
 	expansion.set_value(true);
 	pros::delay(1000);
@@ -966,7 +1030,7 @@ roller.move_velocity(0);
 	expansion.set_value(true);
 
 	pros::delay(1000);
-	getTo(-8,16);
+	//getTo(-8,16);
 	/*
 	nw.move_velocity(300);
 	se.move_velocity(300);
