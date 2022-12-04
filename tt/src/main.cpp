@@ -39,7 +39,7 @@ const double kV2 = 17;
 double kP2 = 90; 
 double kD2 = 0;
 double afpe = 0, bfpe = 0;
-double targetVelocity, targetVelocity2 = 380;
+double targetVelocity, targetVelocity2 = 350;
 double test;
 double av,bv;
 
@@ -229,7 +229,7 @@ bv = (sumb/velQueueb.size());
 }
 
 void initialize() {
-	red = true;
+	red = false;
 	expansion.pros::ADIDigitalOut::set_value(0);
 	air.pros::ADIDigitalOut::set_value(0);
 	optical_sensor.set_led_pwm(10);
@@ -436,7 +436,7 @@ void URauton2(){
 void rwl(){
 	pros::delay(500);
 	roller.move_velocity(-200);
-	pros::delay(800);
+	pros::delay(1000);
 	roller.move_velocity(0);
 	nw.move_velocity(0);
 	se.move_velocity(0);
@@ -446,7 +446,7 @@ void rwl(){
 }
 
 void lrr(){
-	double startm = pros::millis();
+	long long startm = pros::millis();
 	if(red){
 		int x = 0;
 		
@@ -455,6 +455,7 @@ void lrr(){
 			pros::delay(5);
 			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
 			return;
+			if(pros::millis()- startm > 5000) return;
 		}
 		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
 		}
@@ -467,6 +468,7 @@ void lrr(){
 			return;
 			x++;
 			if(x>500) return;
+			if(pros::millis()-startm > 5000) return;
 		}
 		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
 		}
@@ -479,6 +481,7 @@ void lrr(){
 			pros::delay(5);
 			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
 			return;
+			if(pros::millis()-startm > 5000) return;
 		}
 		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
 		}
@@ -488,6 +491,7 @@ void lrr(){
 			pros::delay(5);
 			if(master.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
 			return;
+			if(pros::millis()-startm > 5000) return;
 		}
 		px  = master.get_digital(pros::E_CONTROLLER_DIGITAL_X);
 		}
@@ -658,18 +662,18 @@ void rs(){
 	expansion.set_value(0);
 	//targetVelocity2 = 540;
 	//targetVelocity = 137;
-	targetVelocity2 = 334;
-	targetVelocity = 334;
+	targetVelocity2 = 340; //334
+	targetVelocity = 340;  //334
 	roller.move_velocity(-200);
 	intake.move_velocity(-600);
 	ki = 2;
 	kd = 12000;
-	getTo(0,30);
+	getTo(0,29); //30
 	kd = 9000;
-	pros::delay(1000);
+	pros::delay(500);
 	intake.move_velocity(0);
 	roller.move_velocity(0);
-	turnTo(22); //20.5 22
+	turnTo(21.7); //20.5 22 
 	
 	ki = 1;
 	//pros::delay(700);
@@ -679,12 +683,12 @@ void rs(){
 
 			roller.move_velocity(190);
 			
-	pros::delay(170);
+	pros::delay(135); //170
 	intake.move_velocity(0);
 			roller.move_velocity(0);
 			targetVelocity2 = 355;
 	targetVelocity = 355;
-			pros::delay(1000);
+			pros::delay(800); //1000 DECREASE
 	intake.move_velocity(-600);
 			roller.move_velocity(190);
 	pros::delay(120); //150 110
@@ -700,8 +704,55 @@ void rs(){
 	pros::delay(2000);
 	intake.move_velocity(0);
 			roller.move_velocity(0);
+
+ki = 13;
+
+roller.move_velocity(-200);
+	intake.move_velocity(-600);
+	getTo(-5,35);
+	pros::delay(800);
+	targetVelocity2 = 357;
+	targetVelocity = 357;
+	turnTo2(31); //28
+	roller.move_velocity(0);
+	intake.move_velocity(0);
+	
+			//pros::delay(1000);
+
+	intake.move_velocity(600);
+			roller.move_velocity(180);
+			
+	pros::delay(1000); //1500
+	intake.move_velocity(0);
+			roller.move_velocity(0);
+
+
+
+/*
+getTo(0,15);
+turnTo2(-45);
+roller.move_velocity(-200);
+	intake.move_velocity(-600);
+	ki = 5;
+	getTo(-30,50);
+
+pros::delay(1000);
+getTo(0,30);
+	kd = 9000;
+	pros::delay(1000);
+	intake.move_velocity(0);
+	roller.move_velocity(0);
+	turnTo(23); //20.5 22 
+	pros::delay(3000);
+
+	*/
+
+//
+ki = 1;
+tkI = 45; //15 40
 			getTo(28,-3);
-			turnTo2(0);
+
+			turnTo(0); //2 style
 	nw.move_velocity(-600);
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
@@ -866,7 +917,7 @@ fb.move_velocity(-600);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
 	*/
-	lrr(); //IMP!! NEED TO FIX
+	rwl(); //IMP!! NEED TO FIX
 	nw.move_velocity(600);
 	se.move_velocity(600);
 	ne.move_velocity(600);
@@ -889,7 +940,7 @@ fb.move_velocity(-600);
 	ki=6; //7
 	roller.move_velocity(0);
 	intake.move_velocity(0);
-	getTo(-24,23); //-25
+	getTo(-24,20); //-25 23
 	turnTo2(90);
 	roller.move_velocity(0);
 	intake.move_velocity(0);
@@ -897,12 +948,12 @@ fb.move_velocity(-600);
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
 	sw.move_velocity(-600);
-	pros::delay(450); //300 350
+	pros::delay(600); //300 350 450
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
 	sw.move_velocity(0);
-	lrr();
+	rwl();
 	nw.move_velocity(600);
 	se.move_velocity(600);
 	ne.move_velocity(600);
@@ -926,7 +977,7 @@ roller.move_velocity(0);
 	targetVelocity = 330;
 	getTo(-20,74); //76
 	tkI = 18; //15
-	turnTo(1); 
+	turnTo(1.5); 
 	pros::delay(500);
 	roller.move_velocity(200);
 	intake.move_velocity(-600);
@@ -939,29 +990,29 @@ targetVelocity2 = 335;
 turnTo(45);
 roller.move_velocity(-200);
 	intake.move_velocity(-600);
-	ki = 5;
+	ki = 7; //5
 getTo(15,75);
 pros::delay(2000);
 roller.move_velocity(0);
 	intake.move_velocity(0);
 pros::delay(200);
 
-turnTo(-40);
+turnTo2(-38);
 roller.move_velocity(200);
 	intake.move_velocity(-600);
 	pros::delay(2000);
 	intake.move_velocity(600);
 
-ki = 27;
+ki =30;
 getTo(23,74); //23
 	pros::delay(500);
 	roller.move_velocity(-200);
 	intake.move_velocity(-600);
-	ki = 1;
-	getTo(23.5,115);
+	ki = 5;
+	getTo(24,115); //23.5
 
 	tkI = 25;
-	turnTo(-93);
+	turnTo2(-93);
 pros::delay(500);
 	roller.move_velocity(200);
 	intake.move_velocity(-600);
@@ -990,7 +1041,7 @@ nw.move_velocity(200);
 	sw.move_velocity(0);
 targetVelocity2 = 330;
 	targetVelocity = 330;
-getTo(21,119);
+getTo(22,119); //21
 
 	tkI = 5;
 	turnTo(-87);
@@ -1004,13 +1055,23 @@ pros::delay(500);
 //getTo(56,90);
 //pros::delay(2000);
 ki = 1;
-getTo(77,123);
+getTo(80,123); //77
+tkI = 30;
+
+turnTo2(-137);
+expansion.set_value(true);
+	pros::delay(1000);
+	expansion.set_value(false);
+	pros::delay(500);
+	expansion.set_value(true);
+
+/*
 turnTo(-180);
 nw.move_velocity(-600);
 	se.move_velocity(-600);
 	ne.move_velocity(-600);
 	sw.move_velocity(-600);
-	pros::delay(600); //300 350
+	pros::delay(1000); //300 350
 	nw.move_velocity(0);
 	se.move_velocity(0);
 	ne.move_velocity(0);
@@ -1020,6 +1081,7 @@ nw.move_velocity(-600);
 	ki = 15;
 	getTo(88,120);
 	turnTo(-135);
+	
 
 	//pros::delay(4000);
 	
@@ -1031,9 +1093,10 @@ nw.move_velocity(-600);
 
 	pros::delay(1000);
 	//getTo(-8,16);
-	/*
+	
 	nw.move_velocity(300);
-	se.move_velocity(300);
+	se.move_velocity(300);n
+
 	ne.move_velocity(300);
 	sw.move_velocity(300);
 	pros::delay(600);
@@ -1046,7 +1109,7 @@ nw.move_velocity(-600);
 
 
 void autonomous() {
-skills();
+rs();
 }
 
 
@@ -1056,8 +1119,8 @@ bool cco = false;
 
 void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
-	targetVelocity = 375;
-	targetVelocity2 = 375;
+	targetVelocity = 350;
+	targetVelocity2 = 350;
 	while (true){
 
 	/*
@@ -1070,7 +1133,7 @@ void opcontrol() {
 			pros::lcd::print(6,"bvel%lf",fb.get_actual_velocity());
 */
 			
-		double tilt = 45+in.get_heading()   ; //for upper right auton, -90
+		double tilt = 45+in.get_heading()  -90 ; //for upper right auton, -90
 		if(master.get_analog(ANALOG_LEFT_X)==0){
 			if(master.get_analog(ANALOG_LEFT_Y)<0) tilt+=180;
 		}
